@@ -1,0 +1,26 @@
+name: mygoat
+description: "A professional offline-first goat farm management app."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.12.1 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  isar: 3.1.0+1
+  isar_flutter_libs: 3.1.0+1
+  path_provider: ^2.1.5
+  flutter_riverpod: ^3.3.1
+  supabase_flutter: ^2.14.1
+  connectivity_plus: ^7.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  isar_community_generator: ^3.2.0-dev.3
+  build_runner: ^2.4.9
