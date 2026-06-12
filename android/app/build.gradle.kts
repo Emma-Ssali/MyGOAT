@@ -43,3 +43,18 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+subprojects {
+    afterEvaluate {
+        if (extensions.findByName("android") != null) {
+            val androidExtension = extensions.getByName("android") as? com.android.build.gradle.BaseExtension
+            if (androidExtension != null && androidExtension.namespace == null) {
+                if (name == "isar_flutter_libs") {
+                    androidExtension.namespace = "dev.isar.isar_flutter_libs"
+                } else if (name == "path_provider_android") {
+                    androidExtension.namespace = "io.flutter.plugins.pathprovider"
+                }
+            }
+        }
+    }
+}

@@ -1,20 +1,18 @@
 import 'package:isar/isar.dart';
 
-// This will also show a target generation error for now, which is normal!
 part 'transaction.g.dart';
 
-@Collection()
+@collection
 class FinancialTransaction {
-  Id id = Isar.autoIncrement; // Auto-incrementing local ID
+  Id? id; // Nullable auto-increment key
 
-  late String type;        // Must be 'Income' or 'Expense'
-  late String category;    // e.g., 'Goat Sale', 'Feed Purchase', 'Veterinary Care'
-  late double amount;      // Cash value of the transaction
-  late DateTime date;      // When the transaction occurred
-  
-  String? description;     // Optional notes or details about the transaction
-  String? associatedTag;   // Optional link to tie this cash flow to a specific goat's tagNumber
+  late double amount;
+  late String category;
+  late String description;
+  late bool isIncome; // Explicitly matching what the providers need!
+  late DateTime date;
+  late DateTime lastSyncedAt;
 
-  // Timestamps for synchronization tracking
-  late DateTime createdAt;
+  // Added this field to allow transactions to be isolated to individual goats
+  String? linkedGoatTagId; 
 }

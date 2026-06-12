@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.12.1 <4.0.0'
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -15,12 +15,12 @@ dependencies:
   isar: 3.1.0+1
   isar_flutter_libs: 3.1.0+1
   path_provider: ^2.1.5
-  flutter_riverpod: ^3.3.1
+  flutter_riverpod: ^2.5.1
   supabase_flutter: ^2.14.1
-  connectivity_plus: ^7.1.1
+  connectivity_plus: ^6.1.1 # Lowered slightly to fit your target SDK floor safely
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  isar_community_generator: ^3.2.0-dev.3
   build_runner: ^2.4.9
+  isar_generator: 3.1.0+1 # Fixes the version mismatch error entirely
