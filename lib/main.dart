@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'views/home_navigation_view.dart'; // Pointing to the new controller
+import 'views/goat_dashboard_view.dart';
 
 void main() {
   runApp(
+    // ProviderScope is the engine that keeps track of all your data streams
     const ProviderScope(
       child: MyGoatApp(),
     ),
@@ -16,13 +17,13 @@ class MyGoatApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'My Goat App',
+      title: 'MyGOAT',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: const HomeNavigationView(), // This loads our bottom bar hub!
+      home: const GoatDashboardView(), // Automatically boots up straight into your live herd list
     );
   }
 }

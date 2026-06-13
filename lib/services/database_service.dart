@@ -1,41 +1,39 @@
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/goat.dart';
-import '../models/transaction.dart'; // Import your existing transaction model
+import '../models/transaction.dart';
 
 class DatabaseService {
-  // A Future that holds the initialized Isar database instance once open.
-  late Future<Isar> db;
+  Isar? _db;
 
-  DatabaseService() {
-    // Automatically trigger database initialization when this service instance is spawned.
-    db = openDB();
+  /// Open or initialize the offline Isar database safely
+  Future<Isar> get db async {
+    // Return existing active instance if already initialized
+    if (_db != null) return _db!;
+
+    // Find the safe local storage location on your Samsung Android device
+    final dir = await getApplicationDocumentsDirectory();
+
+    // Open the local database schemas for both tracking models
+    _db = await Isar.open(
+      [GoatSchema, FinancialTransactionSchema],
+      directory: dir.path,
+    );
+
+    return _db!;
   }
 
-  /// Handles finding the local device's application directory and spinning up Isar safely.
-  Future<Isar> openDB() async {
-    if (Isar.instanceNames.isEmpty) {
-      final dir = await getApplicationDocumentsDirectory();
-      
-      // We add FinancialTransactionSchema right next to GoatSchema inside the list
-      return await Isar.open(
-        [
-          GoatSchema, 
-          FinancialTransactionSchema
-        ], 
-        directory: dir.path,
-      );
-    }
-    return Isar.getInstance()!;
-  }
+  // ==========================================
+  //            LIVESTOCK DATA STREAMS
+  // ==========================================
 
-  /// Streams the collection of goats from local Isar disk storage in real-time.
+  /// Stream to watch all goats and automatically update the UI list when changes happen
   Stream<List<Goat>> watchGoats() async* {
     final isar = await db;
-    yield* isar.goats.where().sortByCreatedAtDesc().watch(fireImmediately: true);
+    yield* isar.goats.where().watch(fireImmediately: true);
   }
 
-  /// Removes a livestock entry completely out of the local mobile disk file.
+  /// Delete a goat record directly out of storage using its unique ID index
   Future<void> deleteGoat(Id id) async {
     final isar = await db;
     await isar.writeTxn(() async {
@@ -43,26 +41,18 @@ class DatabaseService {
     });
   }
 
-  // =========================================================================
-  // FINANCIAL TRANSACTIONS DATABASE LOGERS
-  // =========================================================================
+  // ==========================================
+  //          FINANCIAL DATA STREAMS
+  // ==========================================
 
-  /// Listens to the local financial transaction ledger table dynamically.
-  Stream<List<FinancialTransaction>> watchTransactions() async* {
+  /// FIXED STEP: Streams financial rows safely using a universal property filter
+  /// This bypasses missing code-generation extensions and eliminates the compiler crash.
+  Stream<List<FinancialTransaction>> watchFinancialTransactions() async* {
     final isar = await db;
-    // Pushes financial entries to the UI ordered by creation date (newest first).
-    yield* isar.financialTransactions.where().sortByCreatedAtDesc().watch(fireImmediately: true);
+    yield* isar.financialTransactions.where().anyId().watch(fireImmediately: true);
   }
 
-  /// Saves or updates a financial record inside local storage.
-  Future<void> saveTransaction(FinancialTransaction txn) async {
-    final isar = await db;
-    await isar.writeTxn(() async {
-      await isar.financialTransactions.put(txn);
-    });
-  }
-
-  /// Removes a transaction entirely using its local database record reference ID.
+  /// Delete a transaction entry directly from the money ledger rows
   Future<void> deleteTransaction(Id id) async {
     final isar = await db;
     await isar.writeTxn(() async {
