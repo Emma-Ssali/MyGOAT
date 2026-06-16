@@ -17,48 +17,68 @@ const GoatSchema = CollectionSchema(
   name: r'Goat',
   id: 2775167306356603232,
   properties: {
-    r'breed': PropertySchema(
+    r'acquisitionNote': PropertySchema(
       id: 0,
+      name: r'acquisitionNote',
+      type: IsarType.string,
+    ),
+    r'acquisitionSource': PropertySchema(
+      id: 1,
+      name: r'acquisitionSource',
+      type: IsarType.string,
+    ),
+    r'breed': PropertySchema(
+      id: 2,
       name: r'breed',
       type: IsarType.string,
     ),
     r'createdAt': PropertySchema(
-      id: 1,
+      id: 3,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
+    r'dateOfAcquisition': PropertySchema(
+      id: 4,
+      name: r'dateOfAcquisition',
+      type: IsarType.dateTime,
+    ),
     r'dateOfBirth': PropertySchema(
-      id: 2,
+      id: 5,
       name: r'dateOfBirth',
       type: IsarType.dateTime,
     ),
     r'gender': PropertySchema(
-      id: 3,
+      id: 6,
       name: r'gender',
       type: IsarType.string,
     ),
     r'isTagged': PropertySchema(
-      id: 4,
+      id: 7,
       name: r'isTagged',
       type: IsarType.bool,
     ),
     r'lastSyncedAt': PropertySchema(
-      id: 5,
+      id: 8,
       name: r'lastSyncedAt',
       type: IsarType.dateTime,
     ),
+    r'photoPath': PropertySchema(
+      id: 9,
+      name: r'photoPath',
+      type: IsarType.string,
+    ),
     r'status': PropertySchema(
-      id: 6,
+      id: 10,
       name: r'status',
       type: IsarType.string,
     ),
     r'tagId': PropertySchema(
-      id: 7,
+      id: 11,
       name: r'tagId',
       type: IsarType.string,
     ),
     r'weight': PropertySchema(
-      id: 8,
+      id: 12,
       name: r'weight',
       type: IsarType.double,
     )
@@ -73,7 +93,7 @@ const GoatSchema = CollectionSchema(
       id: -2598179288284149414,
       name: r'tagId',
       unique: true,
-      replace: true,
+      replace: false,
       properties: [
         IndexPropertySchema(
           name: r'tagId',
@@ -97,8 +117,21 @@ int _goatEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.acquisitionNote;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.acquisitionSource.length * 3;
   bytesCount += 3 + object.breed.length * 3;
   bytesCount += 3 + object.gender.length * 3;
+  {
+    final value = object.photoPath;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.status.length * 3;
   bytesCount += 3 + object.tagId.length * 3;
   return bytesCount;
@@ -110,15 +143,19 @@ void _goatSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.breed);
-  writer.writeDateTime(offsets[1], object.createdAt);
-  writer.writeDateTime(offsets[2], object.dateOfBirth);
-  writer.writeString(offsets[3], object.gender);
-  writer.writeBool(offsets[4], object.isTagged);
-  writer.writeDateTime(offsets[5], object.lastSyncedAt);
-  writer.writeString(offsets[6], object.status);
-  writer.writeString(offsets[7], object.tagId);
-  writer.writeDouble(offsets[8], object.weight);
+  writer.writeString(offsets[0], object.acquisitionNote);
+  writer.writeString(offsets[1], object.acquisitionSource);
+  writer.writeString(offsets[2], object.breed);
+  writer.writeDateTime(offsets[3], object.createdAt);
+  writer.writeDateTime(offsets[4], object.dateOfAcquisition);
+  writer.writeDateTime(offsets[5], object.dateOfBirth);
+  writer.writeString(offsets[6], object.gender);
+  writer.writeBool(offsets[7], object.isTagged);
+  writer.writeDateTime(offsets[8], object.lastSyncedAt);
+  writer.writeString(offsets[9], object.photoPath);
+  writer.writeString(offsets[10], object.status);
+  writer.writeString(offsets[11], object.tagId);
+  writer.writeDouble(offsets[12], object.weight);
 }
 
 Goat _goatDeserialize(
@@ -128,16 +165,20 @@ Goat _goatDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = Goat();
-  object.breed = reader.readString(offsets[0]);
-  object.createdAt = reader.readDateTime(offsets[1]);
-  object.dateOfBirth = reader.readDateTime(offsets[2]);
-  object.gender = reader.readString(offsets[3]);
+  object.acquisitionNote = reader.readStringOrNull(offsets[0]);
+  object.acquisitionSource = reader.readString(offsets[1]);
+  object.breed = reader.readString(offsets[2]);
+  object.createdAt = reader.readDateTime(offsets[3]);
+  object.dateOfAcquisition = reader.readDateTime(offsets[4]);
+  object.dateOfBirth = reader.readDateTime(offsets[5]);
+  object.gender = reader.readString(offsets[6]);
   object.id = id;
-  object.isTagged = reader.readBool(offsets[4]);
-  object.lastSyncedAt = reader.readDateTime(offsets[5]);
-  object.status = reader.readString(offsets[6]);
-  object.tagId = reader.readString(offsets[7]);
-  object.weight = reader.readDouble(offsets[8]);
+  object.isTagged = reader.readBool(offsets[7]);
+  object.lastSyncedAt = reader.readDateTime(offsets[8]);
+  object.photoPath = reader.readStringOrNull(offsets[9]);
+  object.status = reader.readString(offsets[10]);
+  object.tagId = reader.readString(offsets[11]);
+  object.weight = reader.readDouble(offsets[12]);
   return object;
 }
 
@@ -149,22 +190,30 @@ P _goatDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 1:
-      return (reader.readDateTime(offset)) as P;
-    case 2:
-      return (reader.readDateTime(offset)) as P;
-    case 3:
       return (reader.readString(offset)) as P;
+    case 2:
+      return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readDateTime(offset)) as P;
     case 4:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 5:
       return (reader.readDateTime(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 8:
+      return (reader.readDateTime(offset)) as P;
+    case 9:
+      return (reader.readStringOrNull(offset)) as P;
+    case 10:
+      return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
       return (reader.readDouble(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -356,6 +405,283 @@ extension GoatQueryWhere on QueryBuilder<Goat, Goat, QWhereClause> {
 }
 
 extension GoatQueryFilter on QueryBuilder<Goat, Goat, QFilterCondition> {
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'acquisitionNote',
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'acquisitionNote',
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'acquisitionNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'acquisitionNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'acquisitionNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'acquisitionNote',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'acquisitionNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'acquisitionNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'acquisitionNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'acquisitionNote',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'acquisitionNote',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionNoteIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'acquisitionNote',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionSourceEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'acquisitionSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionSourceGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'acquisitionSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionSourceLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'acquisitionSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionSourceBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'acquisitionSource',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionSourceStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'acquisitionSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionSourceEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'acquisitionSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionSourceContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'acquisitionSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionSourceMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'acquisitionSource',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> acquisitionSourceIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'acquisitionSource',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition>
+      acquisitionSourceIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'acquisitionSource',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Goat, Goat, QAfterFilterCondition> breedEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -529,6 +855,59 @@ extension GoatQueryFilter on QueryBuilder<Goat, Goat, QFilterCondition> {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
         property: r'createdAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> dateOfAcquisitionEqualTo(
+      DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'dateOfAcquisition',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> dateOfAcquisitionGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'dateOfAcquisition',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> dateOfAcquisitionLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'dateOfAcquisition',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> dateOfAcquisitionBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'dateOfAcquisition',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -844,6 +1223,152 @@ extension GoatQueryFilter on QueryBuilder<Goat, Goat, QFilterCondition> {
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'photoPath',
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'photoPath',
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'photoPath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'photoPath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'photoPath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'photoPath',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'photoPath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'photoPath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'photoPath',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'photoPath',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'photoPath',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterFilterCondition> photoPathIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'photoPath',
+        value: '',
       ));
     });
   }
@@ -1172,6 +1697,30 @@ extension GoatQueryObject on QueryBuilder<Goat, Goat, QFilterCondition> {}
 extension GoatQueryLinks on QueryBuilder<Goat, Goat, QFilterCondition> {}
 
 extension GoatQuerySortBy on QueryBuilder<Goat, Goat, QSortBy> {
+  QueryBuilder<Goat, Goat, QAfterSortBy> sortByAcquisitionNote() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'acquisitionNote', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> sortByAcquisitionNoteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'acquisitionNote', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> sortByAcquisitionSource() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'acquisitionSource', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> sortByAcquisitionSourceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'acquisitionSource', Sort.desc);
+    });
+  }
+
   QueryBuilder<Goat, Goat, QAfterSortBy> sortByBreed() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'breed', Sort.asc);
@@ -1193,6 +1742,18 @@ extension GoatQuerySortBy on QueryBuilder<Goat, Goat, QSortBy> {
   QueryBuilder<Goat, Goat, QAfterSortBy> sortByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> sortByDateOfAcquisition() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateOfAcquisition', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> sortByDateOfAcquisitionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateOfAcquisition', Sort.desc);
     });
   }
 
@@ -1244,6 +1805,18 @@ extension GoatQuerySortBy on QueryBuilder<Goat, Goat, QSortBy> {
     });
   }
 
+  QueryBuilder<Goat, Goat, QAfterSortBy> sortByPhotoPath() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'photoPath', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> sortByPhotoPathDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'photoPath', Sort.desc);
+    });
+  }
+
   QueryBuilder<Goat, Goat, QAfterSortBy> sortByStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.asc);
@@ -1282,6 +1855,30 @@ extension GoatQuerySortBy on QueryBuilder<Goat, Goat, QSortBy> {
 }
 
 extension GoatQuerySortThenBy on QueryBuilder<Goat, Goat, QSortThenBy> {
+  QueryBuilder<Goat, Goat, QAfterSortBy> thenByAcquisitionNote() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'acquisitionNote', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> thenByAcquisitionNoteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'acquisitionNote', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> thenByAcquisitionSource() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'acquisitionSource', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> thenByAcquisitionSourceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'acquisitionSource', Sort.desc);
+    });
+  }
+
   QueryBuilder<Goat, Goat, QAfterSortBy> thenByBreed() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'breed', Sort.asc);
@@ -1303,6 +1900,18 @@ extension GoatQuerySortThenBy on QueryBuilder<Goat, Goat, QSortThenBy> {
   QueryBuilder<Goat, Goat, QAfterSortBy> thenByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> thenByDateOfAcquisition() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateOfAcquisition', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> thenByDateOfAcquisitionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateOfAcquisition', Sort.desc);
     });
   }
 
@@ -1366,6 +1975,18 @@ extension GoatQuerySortThenBy on QueryBuilder<Goat, Goat, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Goat, Goat, QAfterSortBy> thenByPhotoPath() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'photoPath', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QAfterSortBy> thenByPhotoPathDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'photoPath', Sort.desc);
+    });
+  }
+
   QueryBuilder<Goat, Goat, QAfterSortBy> thenByStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'status', Sort.asc);
@@ -1404,6 +2025,22 @@ extension GoatQuerySortThenBy on QueryBuilder<Goat, Goat, QSortThenBy> {
 }
 
 extension GoatQueryWhereDistinct on QueryBuilder<Goat, Goat, QDistinct> {
+  QueryBuilder<Goat, Goat, QDistinct> distinctByAcquisitionNote(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'acquisitionNote',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QDistinct> distinctByAcquisitionSource(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'acquisitionSource',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Goat, Goat, QDistinct> distinctByBreed(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1414,6 +2051,12 @@ extension GoatQueryWhereDistinct on QueryBuilder<Goat, Goat, QDistinct> {
   QueryBuilder<Goat, Goat, QDistinct> distinctByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'createdAt');
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QDistinct> distinctByDateOfAcquisition() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'dateOfAcquisition');
     });
   }
 
@@ -1439,6 +2082,13 @@ extension GoatQueryWhereDistinct on QueryBuilder<Goat, Goat, QDistinct> {
   QueryBuilder<Goat, Goat, QDistinct> distinctByLastSyncedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lastSyncedAt');
+    });
+  }
+
+  QueryBuilder<Goat, Goat, QDistinct> distinctByPhotoPath(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'photoPath', caseSensitive: caseSensitive);
     });
   }
 
@@ -1470,6 +2120,18 @@ extension GoatQueryProperty on QueryBuilder<Goat, Goat, QQueryProperty> {
     });
   }
 
+  QueryBuilder<Goat, String?, QQueryOperations> acquisitionNoteProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'acquisitionNote');
+    });
+  }
+
+  QueryBuilder<Goat, String, QQueryOperations> acquisitionSourceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'acquisitionSource');
+    });
+  }
+
   QueryBuilder<Goat, String, QQueryOperations> breedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'breed');
@@ -1479,6 +2141,12 @@ extension GoatQueryProperty on QueryBuilder<Goat, Goat, QQueryProperty> {
   QueryBuilder<Goat, DateTime, QQueryOperations> createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
+    });
+  }
+
+  QueryBuilder<Goat, DateTime, QQueryOperations> dateOfAcquisitionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'dateOfAcquisition');
     });
   }
 
@@ -1503,6 +2171,12 @@ extension GoatQueryProperty on QueryBuilder<Goat, Goat, QQueryProperty> {
   QueryBuilder<Goat, DateTime, QQueryOperations> lastSyncedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'lastSyncedAt');
+    });
+  }
+
+  QueryBuilder<Goat, String?, QQueryOperations> photoPathProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'photoPath');
     });
   }
 

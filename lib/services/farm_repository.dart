@@ -1,27 +1,32 @@
 import 'package:isar/isar.dart';
-import 'database_service.dart';
 import '../models/goat.dart';
 
 class FarmRepository {
-  final DatabaseService _dbService;
+  final Isar isar;
 
-  FarmRepository(this._dbService);
+  FarmRepository(this.isar);
 
-  /// Saves or updates an animal profile instantly to offline storage
-  Future<void> addOrUpdateGoat(Goat goat) async {
-    final isar = await _dbService.db;
-    
-    // Isar completely requires database changes to happen within a write transaction block
-    await isar.writeTxn(() async {
-      await isar.goats.put(goat); // .put automatically adds new rows or rewrites duplicates safely
-    });
-    
-    _triggerBackgroundSync(goat);
+  // Watch livestock records live
+  Stream<List<Goat>> watchGoats() {
+    return isar.goats.where().watch(fireImmediately: true);
   }
 
-  /// Temporary placeholder for your future cloud integration phase
-  void _triggerBackgroundSync(Goat goat) {
-    // For now, it logs safely to the console and retains a pure offline profile state
-    print('Local Storage Confirmed! Tag ID: ${goat.tagId} is securely saved on-device.');
+  // Create or update an animal profile
+  Future<void> addOrUpdateGoat(Goat goat) async {
+    await isar.writeTxn(() async {
+      await isar.goats.put(goat);
+    });
+  }
+
+  // Delete an animal profile from the ledger
+  Future<bool> deleteGoat(Id id) async {
+    return await isar.writeTxn(() async {
+      return await isar.goats.delete(id);
+    });
+  }
+
+  // NEW: look up a goat by tag ID so we can check for duplicates before saving
+  Future<Goat?> findGoatByTag(String tagId) async {
+    return await isar.goats.where().tagIdEqualTo(tagId).findFirst();
   }
 }
