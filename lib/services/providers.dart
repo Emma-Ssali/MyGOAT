@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'database_service.dart';
 import 'farm_repository.dart';
 import '../models/goat.dart';
+import '../models/health_record.dart';
 
 // 1. Spawns one single, permanent instance of your local database engine wrapper
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
@@ -24,4 +25,10 @@ final watchGoatsProvider = StreamProvider.autoDispose<List<Goat>>((ref) {
 // 4. Provides a clean reference to your core database service for financial layers
 final farmDatabaseProvider = Provider((ref) {
   return ref.watch(databaseServiceProvider);
+});
+
+// 5. This provider acts as a direct line to stream health entries into your UI screens
+final watchHealthRecordsProvider = StreamProvider.family.autoDispose<List<HealthRecord>, int>((ref, goatId) {
+  final repository = ref.watch(farmRepositoryProvider);
+  return repository.watchHealthRecords(goatId);
 });

@@ -2,8 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:mygoat/models/transaction.dart';
-// If you have a goat model, make sure it's imported here too:
-// import 'package:mygoat/models/goat.dart'; 
 
 class DatabaseService {
   late Future<Isar> db;
@@ -18,13 +16,26 @@ class DatabaseService {
       return await Isar.open(
         [
           FinancialTransactionSchema,
-          // GoatSchema, // Uncomment and add your Goat schema here if applicable
         ],
         inspector: true,
         directory: dir.path,
       );
     }
     return Isar.getInstance()!;
+  }
+
+  // --- Live Stream Operation ---
+  // This watches the Isar local collection and pushes updates to the UI automatically whenever a transaction changes
+  Stream<List<FinancialTransaction>> watchTransactions() async* {
+    final isar = await db;
+    
+    // Yield the initial collection state immediately on listen
+    yield await isar.financialTransactions.where().findAll();
+    
+    // Listen for any local writes/deletes and yield the freshly updated list
+    await for (final _ in isar.financialTransactions.watchLazy()) {
+      yield await isar.financialTransactions.where().findAll();
+    }
   }
 
   // --- Transaction Operations ---
@@ -46,13 +57,18 @@ class DatabaseService {
   Future<void> deleteGoat(int id) async {
     final isar = await db;
     await isar.writeTxn(() async {
-      // Replace 'goats' with your actual collection name from your Goat model
-      // await isar.goats.delete(id); 
+      // Setup when goat collection is ready
     });
   }
 }
 
-// This is the provider your UI views are reading via ref.read(databaseServiceProvider)
+// 1. The primary database service locator provider
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
   return DatabaseService();
+});
+
+// 2. The missing live stream provider for transactions that your UI views can watch directly
+final transactionsStreamProvider = StreamProvider<List<FinancialTransaction>>((ref) {
+  final service = ref.watch(databaseServiceProvider);
+  return service.watchTransactions();
 });

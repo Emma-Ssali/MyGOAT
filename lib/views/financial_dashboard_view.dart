@@ -15,7 +15,6 @@ class FinancialDashboardView extends ConsumerStatefulWidget {
 
 class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView> {
 
-  // The fixed category list — 'Other' triggers a free text field
   static const List<String> _categories = [
     'Feed & Nutrition',
     'Veterinary & Medicine',
@@ -26,7 +25,6 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
     'Other',
   ];
 
-  // Active filter — null means show all
   String? _activeFilter;
 
   @override
@@ -51,12 +49,10 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
 
           final allTransactions = snapshot.data ?? [];
 
-          // Filter by active category if one is selected
           final transactions = _activeFilter == null
               ? allTransactions
               : allTransactions.where((t) => t.category == _activeFilter).toList();
 
-          // Summary calculations from ALL transactions (not filtered)
           final totalIncome = allTransactions
               .where((t) => t.isIncome)
               .fold(0.0, (sum, t) => sum + t.amount);
@@ -73,7 +69,6 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
                   children: [
-                    // Running balance
                     Card(
                       color: balance >= 0 ? Colors.green.shade50 : Colors.red.shade50,
                       child: Padding(
@@ -102,7 +97,6 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Income and Expense totals side by side
                     Row(
                       children: [
                         Expanded(
@@ -154,7 +148,6 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: [
-                    // "All" chip
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
@@ -164,7 +157,6 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                         selectedColor: Colors.amber.shade100,
                       ),
                     ),
-                    // One chip per category
                     ..._categories.map((cat) => Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
@@ -209,7 +201,9 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
 
                           return Card(
                             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            // CHANGED: tapping a transaction opens the edit modal
                             child: ListTile(
+                              onTap: () => _showTransactionModal(context, goatsAsync, existingTransaction: txn),
                               leading: CircleAvatar(
                                 backgroundColor: isIncome ? Colors.green.shade50 : Colors.red.shade50,
                                 child: Icon(
@@ -230,7 +224,6 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                                   Text('${txn.category} • $formattedDate'),
                                   if (txn.description.isNotEmpty)
                                     Text(txn.description, style: TextStyle(color: Colors.grey.shade600)),
-                                  // Show linked goat tag if present
                                   if (txn.linkedGoatTagId != null && txn.linkedGoatTagId!.isNotEmpty)
                                     Text(
                                       'Goat: ${txn.linkedGoatTagId}',
@@ -239,15 +232,23 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                                 ],
                               ),
                               isThreeLine: true,
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () async {
-                                  if (txn.id != null) {
-                                    await isar.writeTxn(() async {
-                                      await isar.financialTransactions.delete(txn.id as Id);
-                                    });
-                                  }
-                                },
+                              // CHANGED: edit icon instead of just delete
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.edit, size: 20, color: Colors.amber.shade700),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () async {
+                                      if (txn.id != null) {
+                                        await isar.writeTxn(() async {
+                                          await isar.financialTransactions.delete(txn.id as Id);
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -270,14 +271,34 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
     );
   }
 
-  void _showTransactionModal(BuildContext context, AsyncValue<List<Goat>> goatsAsync) {
-    final amountController = TextEditingController();
-    final descriptionController = TextEditingController();
+  // CHANGED: now accepts an optional existingTransaction for editing
+  void _showTransactionModal(
+    BuildContext context,
+    AsyncValue<List<Goat>> goatsAsync, {
+    FinancialTransaction? existingTransaction,
+  }) {
+    final isEditing = existingTransaction != null;
+
+    // Pre-fill controllers when editing
+    final amountController = TextEditingController(
+      text: existingTransaction?.amount != null ? existingTransaction!.amount.toString() : '',
+    );
+    final descriptionController = TextEditingController(
+      text: existingTransaction?.description ?? '',
+    );
     final categoryNoteController = TextEditingController();
 
-    String selectedType = 'Expense';
-    String selectedCategory = 'Feed & Nutrition';
-    String? selectedGoatTagId;
+    // Pre-fill dropdown values when editing
+    String selectedType = (existingTransaction?.isIncome ?? false) ? 'Income' : 'Expense';
+    String selectedCategory = existingTransaction?.category ?? 'Feed & Nutrition';
+    String? selectedGoatTagId = existingTransaction?.linkedGoatTagId;
+
+    // If the saved category isn't in our fixed list, it was a custom 'Other' entry
+    final bool wasCustomCategory = !_categories.contains(selectedCategory) && selectedCategory.isNotEmpty;
+    if (wasCustomCategory) {
+      categoryNoteController.text = selectedCategory;
+      selectedCategory = 'Other';
+    }
 
     final isar = ref.read(databaseServiceProvider).isar;
     final goatList = goatsAsync.value ?? [];
@@ -299,8 +320,9 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // CHANGED: title reflects whether adding or editing
                     Text(
-                      'Log Transaction',
+                      isEditing ? 'Edit Transaction' : 'Log Transaction',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber.shade800),
                     ),
                     const SizedBox(height: 16),
@@ -367,7 +389,7 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                       const SizedBox(height: 12),
                     ],
 
-                    // Link to a goat — dropdown of all tag IDs
+                    // Link to a goat
                     DropdownButtonFormField<String>(
                       value: selectedGoatTagId,
                       decoration: const InputDecoration(
@@ -395,7 +417,10 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                         final enteredAmount = double.tryParse(amountController.text) ?? 0.0;
                         if (enteredAmount <= 0) return;
 
-                        final newTransaction = FinancialTransaction()
+                        // CHANGED: reuse existing transaction when editing
+                        final txnToSave = isEditing ? existingTransaction! : FinancialTransaction();
+
+                        txnToSave
                           ..amount = enteredAmount
                           ..category = selectedCategory == 'Other'
                               ? categoryNoteController.text.trim()
@@ -403,20 +428,42 @@ class _FinancialDashboardViewState extends ConsumerState<FinancialDashboardView>
                           ..description = descriptionController.text.trim()
                           ..isIncome = (selectedType == 'Income')
                           ..linkedGoatTagId = selectedGoatTagId
-                          ..date = DateTime.now()
+                          ..date = existingTransaction?.date ?? DateTime.now()
                           ..lastSyncedAt = DateTime.now();
 
                         await isar.writeTxn(() async {
-                          await isar.financialTransactions.put(newTransaction);
+                          await isar.financialTransactions.put(txnToSave);
                         });
 
                         if (context.mounted) Navigator.pop(context);
                       },
-                      child: const Text(
-                        'Save Transaction',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      child: Text(
+                        isEditing ? 'Apply Changes' : 'Save Transaction',
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
+
+                    // CHANGED: delete button only shown when editing
+                    if (isEditing) ...[
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: () async {
+                          if (existingTransaction.id != null) {
+                            await isar.writeTxn(() async {
+                              await isar.financialTransactions.delete(existingTransaction.id as Id);
+                            });
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Transaction deleted')),
+                              );
+                            }
+                          }
+                        },
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Delete Transaction', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                   ],
                 ),
