@@ -4,6 +4,8 @@ import 'views/goat_dashboard_view.dart';
 import 'views/financial_dashboard_view.dart';
 import 'services/database_service.dart'; // NEW: so we can call DatabaseService()
 import 'services/providers.dart';        // NEW: so we can override databaseServiceProvider
+import 'views/health_dashboard_view.dart';
+
 
 // CHANGED: added 'async' so we can use 'await' inside main
 void main() async {
@@ -58,6 +60,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   final List<Widget> _screens = [
     const GoatDashboardView(),
     const FinancialDashboardView(),
+    const HealthDashboardView(),
   ];
 
   @override
@@ -79,6 +82,10 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet),
             label: 'Finances',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.health_and_safety),
+            label: 'Health',
           ),
         ],
       ),
