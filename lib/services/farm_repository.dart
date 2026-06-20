@@ -1,6 +1,7 @@
 import 'package:isar/isar.dart';
 import '../models/goat.dart';
 import '../models/health_record.dart';
+import '../models/transaction.dart';
 
 class FarmRepository {
   final Isar isar;
@@ -26,13 +27,13 @@ class FarmRepository {
     });
   }
 
-  // NEW: look up a goat by tag ID so we can check for duplicates before saving
+  // Look up a goat by tag ID so we can check for duplicates before saving
   Future<Goat?> findGoatByTag(String tagId) async {
     return await isar.goats.where().tagIdEqualTo(tagId).findFirst();
   }
 
   // =========================================================================
-  // 🩺 SLIDING IN NEW HEALTH FEATURES RIGHT HERE:
+  // 🩺 HEALTH FEATURES
   // =========================================================================
 
   // A channel to READ health logs for a specific goat from the database
@@ -44,10 +45,30 @@ class FarmRepository {
         .watch(fireImmediately: true);
   }
 
-  // A channel to SAVE a new health log into the database
-  Future<void> addHealthRecord(HealthRecord record) async {
+  // A channel to SAVE a new health log, and (if it has a cost) log a
+  // matching expense in the financial ledger in the same transaction.
+  Future<void> addHealthRecord(HealthRecord record, {bool logExpense = true}) async {
     await isar.writeTxn(() async {
       await isar.healthRecords.put(record);
+
+      if (logExpense && record.cost > 0) {
+        String? tagId;
+        if (record.goatId != null) {
+          final goat = await isar.goats.get(record.goatId!);
+          tagId = goat?.tagId;
+        }
+
+        final transaction = FinancialTransaction()
+          ..amount = record.cost
+          ..category = 'Veterinary & Medicine'
+          ..description = '${record.recordType}: ${record.title}'
+          ..isIncome = false
+          ..date = record.date
+          ..lastSyncedAt = DateTime.now()
+          ..linkedGoatTagId = tagId;
+
+        await isar.financialTransactions.put(transaction);
+      }
     });
   }
 
@@ -57,5 +78,4 @@ class FarmRepository {
       return await isar.healthRecords.delete(id);
     });
   }
-
-} // <-- THIS BRACKET IS NOW AT THE VERY BOTTOM SO IT KEEPS EVERYTHING CONNECTED!
+}

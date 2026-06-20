@@ -98,7 +98,7 @@ HealthRecord _healthRecordDeserialize(
   object.cost = reader.readDouble(offsets[0]);
   object.date = reader.readDateTime(offsets[1]);
   object.description = reader.readString(offsets[2]);
-  object.goatId = reader.readLong(offsets[3]);
+  object.goatId = reader.readLongOrNull(offsets[3]);
   object.id = id;
   object.recordType = reader.readString(offsets[4]);
   object.title = reader.readString(offsets[5]);
@@ -119,7 +119,7 @@ P _healthRecordDeserializeProp<P>(
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
-      return (reader.readLong(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
@@ -476,8 +476,26 @@ extension HealthRecordQueryFilter
     });
   }
 
+  QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
+      goatIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'goatId',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
+      goatIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'goatId',
+      ));
+    });
+  }
+
   QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition> goatIdEqualTo(
-      int value) {
+      int? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'goatId',
@@ -488,7 +506,7 @@ extension HealthRecordQueryFilter
 
   QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
       goatIdGreaterThan(
-    int value, {
+    int? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -502,7 +520,7 @@ extension HealthRecordQueryFilter
 
   QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
       goatIdLessThan(
-    int value, {
+    int? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -515,8 +533,8 @@ extension HealthRecordQueryFilter
   }
 
   QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition> goatIdBetween(
-    int lower,
-    int upper, {
+    int? lower,
+    int? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -1112,7 +1130,7 @@ extension HealthRecordQueryProperty
     });
   }
 
-  QueryBuilder<HealthRecord, int, QQueryOperations> goatIdProperty() {
+  QueryBuilder<HealthRecord, int?, QQueryOperations> goatIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'goatId');
     });

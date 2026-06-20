@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/health_record.dart';
+import '../models/goat.dart';
 import '../services/providers.dart';
 
 class HealthDashboardView extends ConsumerWidget {
@@ -8,8 +9,10 @@ class HealthDashboardView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch all health records across goats
     final healthRecordsAsync = ref.watch(watchAllHealthRecordsProvider);
+    final goatsAsync = ref.watch(watchGoatsProvider);
+    final goats = goatsAsync.value ?? [];
+    final tagById = {for (final g in goats) if (g.id != null) g.id!: g.tagId};
 
     return Scaffold(
       appBar: AppBar(
@@ -23,7 +26,6 @@ class HealthDashboardView extends ConsumerWidget {
 
           return Column(
             children: [
-              // Summary cards
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Row(
@@ -41,12 +43,18 @@ class HealthDashboardView extends ConsumerWidget {
                         itemCount: records.length,
                         itemBuilder: (context, index) {
                           final record = records[index];
+                          final linkedTag = record.goatId != null ? tagById[record.goatId] : null;
+
                           return Card(
                             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             child: ListTile(
                               leading: const Icon(Icons.medical_services, color: Colors.redAccent),
                               title: Text('${record.recordType}: ${record.title}'),
-                              subtitle: Text('${record.description}\nCost: UGX ${record.cost.toStringAsFixed(0)}'),
+                              subtitle: Text(
+                                '${record.description}\nCost: UGX ${record.cost.toStringAsFixed(0)}'
+                                '${linkedTag != null ? '\nGoat: $linkedTag' : ''}',
+                              ),
+                              isThreeLine: linkedTag != null,
                               trailing: Text('${record.date.day}/${record.date.month}/${record.date.year}'),
                             ),
                           );
@@ -63,7 +71,7 @@ class HealthDashboardView extends ConsumerWidget {
         backgroundColor: Colors.redAccent,
         icon: const Icon(Icons.add),
         label: const Text('Log New Care'),
-        onPressed: () => _showAddHealthRecordDialog(context, ref),
+        onPressed: () => _showAddHealthRecordDialog(context, ref, goats),
       ),
     );
   }
@@ -86,11 +94,12 @@ class HealthDashboardView extends ConsumerWidget {
     );
   }
 
-  void _showAddHealthRecordDialog(BuildContext context, WidgetRef ref) {
+  void _showAddHealthRecordDialog(BuildContext context, WidgetRef ref, List<Goat> goats) {
     final titleController = TextEditingController();
     final notesController = TextEditingController();
     final costController = TextEditingController();
     String chosenType = 'Vaccination';
+    int? selectedGoatId;
 
     showDialog(
       context: context,
@@ -117,17 +126,39 @@ class HealthDashboardView extends ConsumerWidget {
                       },
                       decoration: const InputDecoration(labelText: 'Care Type'),
                     ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int?>(
+                      value: selectedGoatId,
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('General (no specific goat)'),
+                        ),
+                        ...goats.map(
+                          (g) => DropdownMenuItem<int?>(
+                            value: g.id,
+                            child: Text('Tag: ${g.tagId} • ${g.breed}'),
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        setState(() {
+                          selectedGoatId = val;
+                        });
+                      },
+                      decoration: const InputDecoration(labelText: 'Link to Goat (optional)'),
+                    ),
                     TextField(
-                      controller: titleController, 
+                      controller: titleController,
                       decoration: const InputDecoration(labelText: 'Treatment Name'),
                     ),
                     TextField(
-                      controller: notesController, 
+                      controller: notesController,
                       decoration: const InputDecoration(labelText: 'Notes / Details'),
                     ),
                     TextField(
-                      controller: costController, 
-                      keyboardType: TextInputType.number, 
+                      controller: costController,
+                      keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: 'Cost (UGX)'),
                     ),
                   ],
@@ -139,7 +170,7 @@ class HealthDashboardView extends ConsumerWidget {
                   onPressed: () async {
                     final recordCost = double.tryParse(costController.text) ?? 0.0;
                     final newRecord = HealthRecord()
-                      ..goatId = 0 // General entry flag
+                      ..goatId = selectedGoatId
                       ..date = DateTime.now()
                       ..recordType = chosenType
                       ..title = titleController.text.trim()
