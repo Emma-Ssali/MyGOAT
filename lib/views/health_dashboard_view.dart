@@ -51,11 +51,30 @@ class HealthDashboardView extends ConsumerWidget {
                               leading: const Icon(Icons.medical_services, color: Colors.redAccent),
                               title: Text('${record.recordType}: ${record.title}'),
                               subtitle: Text(
-                                '${record.description}\nCost: UGX ${record.cost.toStringAsFixed(0)}'
+                                '${record.description}\n'
+                                'Cost: UGX ${record.cost.toStringAsFixed(0)} • '
+                                '${record.date.day}/${record.date.month}/${record.date.year}'
                                 '${linkedTag != null ? '\nGoat: $linkedTag' : ''}',
                               ),
-                              isThreeLine: linkedTag != null,
-                              trailing: Text('${record.date.day}/${record.date.month}/${record.date.year}'),
+                              isThreeLine: true,
+                              trailing: PopupMenuButton<String>(
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    _showAddHealthRecordDialog(
+                                      context,
+                                      ref,
+                                      goats,
+                                      existingRecord: record,
+                                    );
+                                  } else if (value == 'delete') {
+                                    _confirmDelete(context, ref, record);
+                                  }
+                                },
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                  PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -94,12 +113,46 @@ class HealthDashboardView extends ConsumerWidget {
     );
   }
 
-  void _showAddHealthRecordDialog(BuildContext context, WidgetRef ref, List<Goat> goats) {
-    final titleController = TextEditingController();
-    final notesController = TextEditingController();
-    final costController = TextEditingController();
-    String chosenType = 'Vaccination';
-    int? selectedGoatId;
+  void _confirmDelete(BuildContext context, WidgetRef ref, HealthRecord record) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Record?'),
+        content: Text(
+          'Delete "${record.recordType}: ${record.title}"? '
+          'This will also remove its linked expense entry, if any.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              if (record.id != null) {
+                await ref.read(farmRepositoryProvider).deleteHealthRecord(record.id!);
+              }
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddHealthRecordDialog(
+    BuildContext context,
+    WidgetRef ref,
+    List<Goat> goats, {
+    HealthRecord? existingRecord,
+  }) {
+    final isEditing = existingRecord != null;
+    final titleController = TextEditingController(text: existingRecord?.title ?? '');
+    final notesController = TextEditingController(text: existingRecord?.description ?? '');
+    final costController = TextEditingController(
+      text: existingRecord != null ? existingRecord.cost.toStringAsFixed(0) : '',
+    );
+    String chosenType = existingRecord?.recordType ?? 'Vaccination';
+    int? selectedGoatId = existingRecord?.goatId;
 
     showDialog(
       context: context,
@@ -107,7 +160,7 @@ class HealthDashboardView extends ConsumerWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Log New Medical Care'),
+              title: Text(isEditing ? 'Edit Medical Care' : 'Log New Medical Care'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -169,18 +222,20 @@ class HealthDashboardView extends ConsumerWidget {
                 ElevatedButton(
                   onPressed: () async {
                     final recordCost = double.tryParse(costController.text) ?? 0.0;
-                    final newRecord = HealthRecord()
+
+                    final record = existingRecord ?? HealthRecord();
+                    record
                       ..goatId = selectedGoatId
-                      ..date = DateTime.now()
+                      ..date = existingRecord?.date ?? DateTime.now()
                       ..recordType = chosenType
                       ..title = titleController.text.trim()
                       ..description = notesController.text.trim()
                       ..cost = recordCost;
 
-                    await ref.read(farmRepositoryProvider).addHealthRecord(newRecord);
+                    await ref.read(farmRepositoryProvider).saveHealthRecord(record);
                     if (context.mounted) Navigator.pop(context);
                   },
-                  child: const Text('Save Record'),
+                  child: Text(isEditing ? 'Update Record' : 'Save Record'),
                 ),
               ],
             );

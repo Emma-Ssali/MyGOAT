@@ -37,13 +37,18 @@ const HealthRecordSchema = CollectionSchema(
       name: r'goatId',
       type: IsarType.long,
     ),
-    r'recordType': PropertySchema(
+    r'linkedTransactionId': PropertySchema(
       id: 4,
+      name: r'linkedTransactionId',
+      type: IsarType.long,
+    ),
+    r'recordType': PropertySchema(
+      id: 5,
       name: r'recordType',
       type: IsarType.string,
     ),
     r'title': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'title',
       type: IsarType.string,
     )
@@ -84,8 +89,9 @@ void _healthRecordSerialize(
   writer.writeDateTime(offsets[1], object.date);
   writer.writeString(offsets[2], object.description);
   writer.writeLong(offsets[3], object.goatId);
-  writer.writeString(offsets[4], object.recordType);
-  writer.writeString(offsets[5], object.title);
+  writer.writeLong(offsets[4], object.linkedTransactionId);
+  writer.writeString(offsets[5], object.recordType);
+  writer.writeString(offsets[6], object.title);
 }
 
 HealthRecord _healthRecordDeserialize(
@@ -100,8 +106,9 @@ HealthRecord _healthRecordDeserialize(
   object.description = reader.readString(offsets[2]);
   object.goatId = reader.readLongOrNull(offsets[3]);
   object.id = id;
-  object.recordType = reader.readString(offsets[4]);
-  object.title = reader.readString(offsets[5]);
+  object.linkedTransactionId = reader.readLongOrNull(offsets[4]);
+  object.recordType = reader.readString(offsets[5]);
+  object.title = reader.readString(offsets[6]);
   return object;
 }
 
@@ -121,8 +128,10 @@ P _healthRecordDeserializeProp<P>(
     case 3:
       return (reader.readLongOrNull(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 5:
+      return (reader.readString(offset)) as P;
+    case 6:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -620,6 +629,80 @@ extension HealthRecordQueryFilter
   }
 
   QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
+      linkedTransactionIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'linkedTransactionId',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
+      linkedTransactionIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'linkedTransactionId',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
+      linkedTransactionIdEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'linkedTransactionId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
+      linkedTransactionIdGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'linkedTransactionId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
+      linkedTransactionIdLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'linkedTransactionId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
+      linkedTransactionIdBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'linkedTransactionId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthRecord, HealthRecord, QAfterFilterCondition>
       recordTypeEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -947,6 +1030,20 @@ extension HealthRecordQuerySortBy
     });
   }
 
+  QueryBuilder<HealthRecord, HealthRecord, QAfterSortBy>
+      sortByLinkedTransactionId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'linkedTransactionId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthRecord, HealthRecord, QAfterSortBy>
+      sortByLinkedTransactionIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'linkedTransactionId', Sort.desc);
+    });
+  }
+
   QueryBuilder<HealthRecord, HealthRecord, QAfterSortBy> sortByRecordType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'recordType', Sort.asc);
@@ -1036,6 +1133,20 @@ extension HealthRecordQuerySortThenBy
     });
   }
 
+  QueryBuilder<HealthRecord, HealthRecord, QAfterSortBy>
+      thenByLinkedTransactionId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'linkedTransactionId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthRecord, HealthRecord, QAfterSortBy>
+      thenByLinkedTransactionIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'linkedTransactionId', Sort.desc);
+    });
+  }
+
   QueryBuilder<HealthRecord, HealthRecord, QAfterSortBy> thenByRecordType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'recordType', Sort.asc);
@@ -1089,6 +1200,13 @@ extension HealthRecordQueryWhereDistinct
     });
   }
 
+  QueryBuilder<HealthRecord, HealthRecord, QDistinct>
+      distinctByLinkedTransactionId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'linkedTransactionId');
+    });
+  }
+
   QueryBuilder<HealthRecord, HealthRecord, QDistinct> distinctByRecordType(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1133,6 +1251,13 @@ extension HealthRecordQueryProperty
   QueryBuilder<HealthRecord, int?, QQueryOperations> goatIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'goatId');
+    });
+  }
+
+  QueryBuilder<HealthRecord, int?, QQueryOperations>
+      linkedTransactionIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'linkedTransactionId');
     });
   }
 

@@ -63,7 +63,8 @@ class GoatDetailView extends ConsumerWidget {
                     final recordCost = double.tryParse(costController.text) ?? 0.0;
                     final cleanTitle = titleController.text.trim().isEmpty ? 'General Care' : titleController.text.trim();
 
-                    // 1. Save directly into your Health Notebook
+                    // Saving this also creates/updates the linked financial
+                    // expense entry automatically (see FarmRepository.saveHealthRecord).
                     final newLog = HealthRecord()
                       ..goatId = goatId
                       ..date = DateTime.now()
@@ -73,21 +74,7 @@ class GoatDetailView extends ConsumerWidget {
                       ..cost = recordCost;
 
                     final repo = ref.read(farmRepositoryProvider);
-                    await repo.addHealthRecord(newLog);
-
-                    // 2. Crossover Link: Auto-log an expense to financial engine if cost is greater than 0
-                    if (recordCost > 0) {
-                      final autoMedicalTxn = FinancialTransaction()
-                        ..amount = recordCost
-                        ..category = 'Medical/Vet Expenses'
-                        ..description = 'Auto-logged from $chosenType: $cleanTitle (Goat Tag: ${goat.tagId})'
-                        ..isIncome = false 
-                        ..linkedGoatTagId = goat.tagId
-                        ..date = DateTime.now()
-                        ..lastSyncedAt = DateTime.now();
-
-                      await ref.read(databaseServiceProvider).saveTransaction(autoMedicalTxn);
-                    }
+                    await repo.saveHealthRecord(newLog);
 
                     if (context.mounted) Navigator.pop(context);
                   },
@@ -133,7 +120,6 @@ class GoatDetailView extends ConsumerWidget {
               ),
             ),
 
-            // Correctly watching our new live transactionsStreamProvider
             ref.watch(transactionsStreamProvider).when(
               data: (txns) {
                 final filtered = txns.where((t) => t.linkedGoatTagId == goat.tagId).toList();

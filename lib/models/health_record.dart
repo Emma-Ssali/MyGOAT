@@ -14,4 +14,8 @@ class HealthRecord {
   late String title;
   late String description;
   late double cost;
+
+  // Tracks the FinancialTransaction generated from this record's cost,
+  // so edits/deletes can keep the financial ledger in sync.
+  int? linkedTransactionId;
 }

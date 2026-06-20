@@ -45,20 +45,30 @@ class FarmRepository {
         .watch(fireImmediately: true);
   }
 
-  // A channel to SAVE a new health log, and (if it has a cost) log a
-  // matching expense in the financial ledger in the same transaction.
-  Future<void> addHealthRecord(HealthRecord record, {bool logExpense = true}) async {
+  // Handles both creating a new record (id == null) and updating an
+  // existing one (id set). Keeps the linked FinancialTransaction in sync:
+  // creates it if needed, updates it if it already exists, or removes it
+  // if the cost was zeroed out on an edit.
+  Future<void> saveHealthRecord(HealthRecord record, {bool logExpense = true}) async {
     await isar.writeTxn(() async {
-      await isar.healthRecords.put(record);
+      String? tagId;
+      if (record.goatId != null) {
+        final goat = await isar.goats.get(record.goatId!);
+        tagId = goat?.tagId;
+      }
 
-      if (logExpense && record.cost > 0) {
-        String? tagId;
-        if (record.goatId != null) {
-          final goat = await isar.goats.get(record.goatId!);
-          tagId = goat?.tagId;
+      final shouldHaveExpense = logExpense && record.cost > 0;
+
+      if (shouldHaveExpense) {
+        FinancialTransaction transaction;
+        if (record.linkedTransactionId != null) {
+          final existing = await isar.financialTransactions.get(record.linkedTransactionId!);
+          transaction = existing ?? FinancialTransaction();
+        } else {
+          transaction = FinancialTransaction();
         }
 
-        final transaction = FinancialTransaction()
+        transaction
           ..amount = record.cost
           ..category = 'Veterinary & Medicine'
           ..description = '${record.recordType}: ${record.title}'
@@ -67,14 +77,24 @@ class FarmRepository {
           ..lastSyncedAt = DateTime.now()
           ..linkedGoatTagId = tagId;
 
-        await isar.financialTransactions.put(transaction);
+        final transactionId = await isar.financialTransactions.put(transaction);
+        record.linkedTransactionId = transactionId;
+      } else if (record.linkedTransactionId != null) {
+        await isar.financialTransactions.delete(record.linkedTransactionId!);
+        record.linkedTransactionId = null;
       }
+
+      await isar.healthRecords.put(record);
     });
   }
 
-  // A channel to DELETE a health log if you made a mistake
+  // A channel to DELETE a health log, and its linked expense entry if present
   Future<bool> deleteHealthRecord(Id id) async {
     return await isar.writeTxn(() async {
+      final record = await isar.healthRecords.get(id);
+      if (record?.linkedTransactionId != null) {
+        await isar.financialTransactions.delete(record!.linkedTransactionId!);
+      }
       return await isar.healthRecords.delete(id);
     });
   }
