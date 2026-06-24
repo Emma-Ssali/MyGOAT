@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:isar/isar.dart';   // ✅ unlocks watch(), findAll(), etc.
+import 'package:isar/isar.dart';
 import 'database_service.dart';
 import 'farm_repository.dart';
 import '../models/goat.dart';
 import '../models/health_record.dart';
+import '../models/transaction.dart';
+import '../models/weight_record.dart';
+import '../models/breeding_record.dart';
 
 // 1. Database service provider
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
@@ -58,10 +61,31 @@ final goatHealthSummaryProvider =
       .findAll();
 
   final totalTreatments = records.length;
-  final totalCost = records.fold<double>(0.0, (sum, r) => sum + (r.cost ?? 0.0));
+  final totalCost = records.fold<double>(0.0, (sum, r) => sum + r.cost);
 
   return {
     'totalTreatments': totalTreatments,
     'totalCost': totalCost,
   };
+});
+
+// 8. Global transactions stream
+final transactionsStreamProvider =
+    StreamProvider.autoDispose<List<FinancialTransaction>>((ref) {
+  final repo = ref.watch(farmRepositoryProvider);
+  return repo.watchTransactions();
+});
+
+// 9. Per-goat weight records stream
+final watchWeightRecordsProvider =
+    StreamProvider.family.autoDispose<List<WeightRecord>, int>((ref, goatId) {
+  final repository = ref.watch(farmRepositoryProvider);
+  return repository.watchWeightRecords(goatId);
+});
+
+// 10. Per-goat breeding records stream
+final watchBreedingRecordsProvider =
+    StreamProvider.family.autoDispose<List<BreedingRecord>, int>((ref, goatId) {
+  final repository = ref.watch(farmRepositoryProvider);
+  return repository.watchBreedingRecords(goatId);
 });

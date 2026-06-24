@@ -2,41 +2,65 @@ import 'package:isar/isar.dart';
 import '../models/goat.dart';
 import '../models/health_record.dart';
 import '../models/transaction.dart';
+import '../models/weight_record.dart';
+import '../models/breeding_record.dart';
 
 class FarmRepository {
   final Isar isar;
 
   FarmRepository(this.isar);
 
-  // Watch livestock records live
+  // =========================================================================
+  // 🐐 GOAT FEATURES
+  // =========================================================================
+
   Stream<List<Goat>> watchGoats() {
     return isar.goats.where().watch(fireImmediately: true);
   }
 
-  // Create or update an animal profile
   Future<void> addOrUpdateGoat(Goat goat) async {
     await isar.writeTxn(() async {
       await isar.goats.put(goat);
     });
   }
 
-  // Delete an animal profile from the ledger
   Future<bool> deleteGoat(Id id) async {
     return await isar.writeTxn(() async {
       return await isar.goats.delete(id);
     });
   }
 
-  // Look up a goat by tag ID so we can check for duplicates before saving
   Future<Goat?> findGoatByTag(String tagId) async {
     return await isar.goats.where().tagIdEqualTo(tagId).findFirst();
+  }
+
+  // =========================================================================
+  // 💸 TRANSACTION FEATURES
+  // =========================================================================
+
+  Stream<List<FinancialTransaction>> watchTransactions() {
+    return isar.financialTransactions
+        .where()
+        .sortByDateDesc()
+        .watch(fireImmediately: true);
+  }
+
+  Future<void> saveTransaction(FinancialTransaction txn) async {
+    await isar.writeTxn(() async {
+      await isar.financialTransactions.put(txn);
+    });
+  }
+
+  Future<bool> deleteTransaction(Id id) async {
+    return await isar.writeTxn(() async {
+      return await isar.financialTransactions.delete(id);
+    });
   }
 
   // =========================================================================
   // 🩺 HEALTH FEATURES
   // =========================================================================
 
-  // A channel to READ health logs for a specific goat from the database
   Stream<List<HealthRecord>> watchHealthRecords(int goatId) {
     return isar.healthRecords
         .filter()
@@ -45,10 +69,6 @@ class FarmRepository {
         .watch(fireImmediately: true);
   }
 
-  // Handles both creating a new record (id == null) and updating an
-  // existing one (id set). Keeps the linked FinancialTransaction in sync:
-  // creates it if needed, updates it if it already exists, or removes it
-  // if the cost was zeroed out on an edit.
   Future<void> saveHealthRecord(HealthRecord record, {bool logExpense = true}) async {
     await isar.writeTxn(() async {
       String? tagId;
@@ -88,7 +108,6 @@ class FarmRepository {
     });
   }
 
-  // A channel to DELETE a health log, and its linked expense entry if present
   Future<bool> deleteHealthRecord(Id id) async {
     return await isar.writeTxn(() async {
       final record = await isar.healthRecords.get(id);
@@ -96,6 +115,54 @@ class FarmRepository {
         await isar.financialTransactions.delete(record!.linkedTransactionId!);
       }
       return await isar.healthRecords.delete(id);
+    });
+  }
+
+  // =========================================================================
+  // ⚖️ WEIGHT FEATURES
+  // =========================================================================
+
+  Stream<List<WeightRecord>> watchWeightRecords(int goatId) {
+    return isar.weightRecords
+        .filter()
+        .goatIdEqualTo(goatId)
+        .sortByDateDesc()
+        .watch(fireImmediately: true);
+  }
+
+  Future<void> saveWeightRecord(WeightRecord record) async {
+    await isar.writeTxn(() async {
+      await isar.weightRecords.put(record);
+    });
+  }
+
+  Future<bool> deleteWeightRecord(Id id) async {
+    return await isar.writeTxn(() async {
+      return await isar.weightRecords.delete(id);
+    });
+  }
+
+  // =========================================================================
+  // 🐣 BREEDING FEATURES
+  // =========================================================================
+
+  Stream<List<BreedingRecord>> watchBreedingRecords(int goatId) {
+    return isar.breedingRecords
+        .filter()
+        .goatIdEqualTo(goatId)
+        .sortByMatingDateDesc()
+        .watch(fireImmediately: true);
+  }
+
+  Future<void> saveBreedingRecord(BreedingRecord record) async {
+    await isar.writeTxn(() async {
+      await isar.breedingRecords.put(record);
+    });
+  }
+
+  Future<bool> deleteBreedingRecord(Id id) async {
+    return await isar.writeTxn(() async {
+      return await isar.breedingRecords.delete(id);
     });
   }
 }
