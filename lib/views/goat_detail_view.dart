@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mygoat/models/transaction.dart';
@@ -12,12 +13,143 @@ class GoatDetailView extends ConsumerWidget {
   const GoatDetailView({super.key, required this.goat});
 
   // =========================================================================
+  // 🐐 PROFILE HEADER
+  // =========================================================================
+  Widget _buildProfileHeader(BuildContext context) {
+    final dob = goat.dateOfBirth as DateTime;
+    final now = DateTime.now();
+    final ageMonths = (now.year - dob.year) * 12 + now.month - dob.month;
+    final ageText = ageMonths >= 12
+        ? '${(ageMonths / 12).floor()} yr ${ageMonths % 12} mo'
+        : '$ageMonths months';
+
+    final statusColor = {
+          'Active': Colors.green,
+          'Sold': Colors.orange,
+          'Dead': Colors.red,
+          'Missing': Colors.grey,
+        }[goat.status] ??
+        Colors.green;
+
+    return Container(
+      width: double.infinity,
+      color: Colors.green.shade700,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      child: Column(
+        children: [
+          // Photo
+          CircleAvatar(
+            radius: 48,
+            backgroundColor: Colors.green.shade300,
+            backgroundImage: goat.photoPath != null
+                ? FileImage(File(goat.photoPath!))
+                : null,
+            child: goat.photoPath == null
+                ? const Icon(Icons.pets, size: 48, color: Colors.white)
+                : null,
+          ),
+          const SizedBox(height: 12),
+
+          // Tag ID
+          Text(
+            goat.tagId?.isNotEmpty == true ? goat.tagId : 'Untagged',
+            style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white),
+          ),
+          const SizedBox(height: 4),
+
+          // Status badge
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.2),
+              border: Border.all(color: statusColor),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              goat.status ?? 'Unknown',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Info grid
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                _infoTile('Breed', goat.breed ?? '-'),
+                _infoTile('Gender', goat.gender ?? '-'),
+                _infoTile('Weight', '${goat.weight ?? 0} kg'),
+                _infoTile('Age', ageText),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                _infoTile('DoB',
+                    '${dob.day}/${dob.month}/${dob.year}'),
+                _infoTile(
+                    'Acquired',
+                    goat.dateOfAcquisition != null
+                        ? '${(goat.dateOfAcquisition as DateTime).day}/${(goat.dateOfAcquisition as DateTime).month}/${(goat.dateOfAcquisition as DateTime).year}'
+                        : '-'),
+                _infoTile(
+                    'Source', goat.acquisitionSource ?? '-'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoTile(String label, String value) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(height: 2),
+          Text(value,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  // =========================================================================
   // 🩺 HEALTH DIALOG
   // =========================================================================
   void _showHealthDialog(BuildContext context, WidgetRef ref,
       {HealthRecord? existing}) {
     final isEditing = existing != null;
-    final titleController = TextEditingController(text: existing?.title ?? '');
+    final titleController =
+        TextEditingController(text: existing?.title ?? '');
     final notesController =
         TextEditingController(text: existing?.description ?? '');
     final costController = TextEditingController(
@@ -28,21 +160,28 @@ class GoatDetailView extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(isEditing ? 'Edit Medical Care' : 'Log New Medical Care'),
+          title:
+              Text(isEditing ? 'Edit Medical Care' : 'Log New Medical Care'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
                   value: chosenType,
-                  items: ['Vaccination', 'Treatment', 'Deworming', 'Vet Visit']
+                  items: [
+                    'Vaccination',
+                    'Treatment',
+                    'Deworming',
+                    'Vet Visit'
+                  ]
                       .map((t) =>
                           DropdownMenuItem(value: t, child: Text(t)))
                       .toList(),
                   onChanged: (val) {
                     if (val != null) setState(() => chosenType = val);
                   },
-                  decoration: const InputDecoration(labelText: 'Care Type'),
+                  decoration:
+                      const InputDecoration(labelText: 'Care Type'),
                 ),
                 TextField(
                   controller: titleController,
@@ -57,7 +196,8 @@ class GoatDetailView extends ConsumerWidget {
                 TextField(
                   controller: costController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Cost (UGX)'),
+                  decoration:
+                      const InputDecoration(labelText: 'Cost (UGX)'),
                 ),
               ],
             ),
@@ -70,10 +210,10 @@ class GoatDetailView extends ConsumerWidget {
               onPressed: () async {
                 final recordCost =
                     double.tryParse(costController.text) ?? 0.0;
-                final cleanTitle = titleController.text.trim().isEmpty
-                    ? 'General Care'
-                    : titleController.text.trim();
-
+                final cleanTitle =
+                    titleController.text.trim().isEmpty
+                        ? 'General Care'
+                        : titleController.text.trim();
                 final record = existing ?? HealthRecord();
                 record
                   ..goatId = goat.id
@@ -82,13 +222,12 @@ class GoatDetailView extends ConsumerWidget {
                   ..title = cleanTitle
                   ..description = notesController.text.trim()
                   ..cost = recordCost;
-
                 await ref
                     .read(farmRepositoryProvider)
                     .saveHealthRecord(record);
                 if (context.mounted) Navigator.pop(context);
               },
-              child: Text(isEditing ? 'Update Record' : 'Save Record'),
+              child: Text(isEditing ? 'Update' : 'Save'),
             ),
           ],
         ),
@@ -110,25 +249,22 @@ class GoatDetailView extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isEditing ? 'Edit Weight Record' : 'Log Weight'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: weightController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration:
-                    const InputDecoration(labelText: 'Weight (kg)'),
-              ),
-              TextField(
-                controller: notesController,
-                decoration:
-                    const InputDecoration(labelText: 'Notes (optional)'),
-              ),
-            ],
-          ),
+        title: Text(isEditing ? 'Edit Weight' : 'Log Weight'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: weightController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Weight (kg)'),
+            ),
+            TextField(
+              controller: notesController,
+              decoration:
+                  const InputDecoration(labelText: 'Notes (optional)'),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -138,7 +274,6 @@ class GoatDetailView extends ConsumerWidget {
             onPressed: () async {
               final kg = double.tryParse(weightController.text);
               if (kg == null || kg <= 0) return;
-
               final record = existing ?? WeightRecord();
               record
                 ..goatId = goat.id
@@ -147,7 +282,6 @@ class GoatDetailView extends ConsumerWidget {
                 ..notes = notesController.text.trim().isEmpty
                     ? null
                     : notesController.text.trim();
-
               await ref
                   .read(farmRepositoryProvider)
                   .saveWeightRecord(record);
@@ -186,7 +320,6 @@ class GoatDetailView extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Mating date picker
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Mating Date'),
@@ -200,9 +333,7 @@ class GoatDetailView extends ConsumerWidget {
                       firstDate: DateTime(2000),
                       lastDate: DateTime.now(),
                     );
-                    if (picked != null) {
-                      setState(() => matingDate = picked);
-                    }
+                    if (picked != null) setState(() => matingDate = picked);
                   },
                 ),
                 TextField(
@@ -221,7 +352,6 @@ class GoatDetailView extends ConsumerWidget {
                   },
                   decoration: const InputDecoration(labelText: 'Outcome'),
                 ),
-                // Expected kidding date picker
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Expected Kidding Date (optional)'),
@@ -259,8 +389,8 @@ class GoatDetailView extends ConsumerWidget {
                   TextField(
                     controller: kidsController,
                     keyboardType: TextInputType.number,
-                    decoration:
-                        const InputDecoration(labelText: 'Number of Kids Born'),
+                    decoration: const InputDecoration(
+                        labelText: 'Number of Kids Born'),
                   ),
                 TextField(
                   controller: notesController,
@@ -291,7 +421,6 @@ class GoatDetailView extends ConsumerWidget {
                   ..notes = notesController.text.trim().isEmpty
                       ? null
                       : notesController.text.trim();
-
                 await ref
                     .read(farmRepositoryProvider)
                     .saveBreedingRecord(record);
@@ -321,8 +450,8 @@ class GoatDetailView extends ConsumerWidget {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent),
             onPressed: () async {
               if (record.id != null) {
                 await ref
@@ -351,8 +480,8 @@ class GoatDetailView extends ConsumerWidget {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent),
             onPressed: () async {
               if (record.id != null) {
                 await ref
@@ -380,8 +509,8 @@ class GoatDetailView extends ConsumerWidget {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent),
             onPressed: () async {
               if (record.id != null) {
                 await ref
@@ -398,6 +527,49 @@ class GoatDetailView extends ConsumerWidget {
   }
 
   // =========================================================================
+  // SECTION HEADER WIDGET
+  // =========================================================================
+  Widget _sectionHeader({
+    required String title,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onAdd,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          if (onAdd != null)
+            ElevatedButton.icon(
+              onPressed: onAdd,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+              ),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Add',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // =========================================================================
   // BUILD
   // =========================================================================
   @override
@@ -405,10 +577,20 @@ class GoatDetailView extends ConsumerWidget {
     final amountController = TextEditingController();
 
     return Scaffold(
-      appBar: AppBar(title: Text('Goat ${goat.tagId ?? ""} Details')),
+      appBar: AppBar(
+        title: Text('Goat ${goat.tagId ?? ""} Details'),
+        backgroundColor: Colors.green.shade700,
+        foregroundColor: Colors.white,
+      ),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
+            // ================================================================
+            // 🐐 PROFILE HEADER
+            // ================================================================
+            _buildProfileHeader(context),
 
             // ================================================================
             // 💸 SECTION 1: FINANCIAL LEDGER
@@ -419,7 +601,8 @@ class GoatDetailView extends ConsumerWidget {
               color: Colors.orange,
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0, vertical: 4.0),
               child: TextField(
                 controller: amountController,
                 keyboardType: TextInputType.number,
@@ -429,6 +612,43 @@ class GoatDetailView extends ConsumerWidget {
                 ),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final manualAmount =
+                        double.tryParse(amountController.text) ?? 0.0;
+                    if (manualAmount > 0) {
+                      final txn = FinancialTransaction()
+                        ..amount = manualAmount
+                        ..category = 'Goat Expenses'
+                        ..description =
+                            'Linked to Goat Tag: ${goat.tagId}'
+                        ..isIncome = false
+                        ..linkedGoatTagId = goat.tagId
+                        ..date = DateTime.now()
+                        ..lastSyncedAt = DateTime.now();
+                      await ref
+                          .read(farmRepositoryProvider)
+                          .saveTransaction(txn);
+                      amountController.clear();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Expense for this Goat',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             ref.watch(transactionsStreamProvider).when(
               data: (txns) {
                 final filtered = txns
@@ -449,12 +669,19 @@ class GoatDetailView extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final t = filtered[index];
                     return ListTile(
+                      leading: Icon(
+                        t.isIncome
+                            ? Icons.arrow_downward
+                            : Icons.arrow_upward,
+                        color: t.isIncome ? Colors.green : Colors.red,
+                      ),
                       title: Text(t.category),
                       subtitle: Text(t.description),
                       trailing: Text(
-                        '${t.isIncome ? "+" : "-"}${t.amount} UGX',
+                        '${t.isIncome ? "+" : "-"} UGX ${t.amount.toStringAsFixed(0)}',
                         style: TextStyle(
-                            color: t.isIncome ? Colors.green : Colors.red),
+                            color: t.isIncome ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.bold),
                       ),
                     );
                   },
@@ -464,35 +691,11 @@ class GoatDetailView extends ConsumerWidget {
                   const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text('Error loading transactions: $err'),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: ElevatedButton(
-                onPressed: () async {
-                  final manualAmount =
-                      double.tryParse(amountController.text) ?? 0.0;
-                  if (manualAmount > 0) {
-                    final txn = FinancialTransaction()
-                      ..amount = manualAmount
-                      ..category = 'Goat Expenses'
-                      ..description = 'Linked to Goat Tag: ${goat.tagId}'
-                      ..isIncome = false
-                      ..linkedGoatTagId = goat.tagId
-                      ..date = DateTime.now()
-                      ..lastSyncedAt = DateTime.now();
-                    await ref
-                        .read(farmRepositoryProvider)
-                        .saveTransaction(txn);
-                    amountController.clear();
-                  }
-                },
-                child: const Text('Add Expense for this Goat'),
+                child: Text('Error: $err'),
               ),
             ),
 
-            const Divider(height: 40, thickness: 2),
+            const Divider(height: 32, thickness: 1),
 
             // ================================================================
             // 🩺 SECTION 2: HEALTH RECORDS
@@ -530,8 +733,6 @@ class GoatDetailView extends ConsumerWidget {
                         isThreeLine: true,
                         trailing: Text(
                             '${r.date.day}/${r.date.month}/${r.date.year}'),
-                        onLongPress: () =>
-                            _showHealthDialog(context, ref, existing: r),
                         onTap: () => showModalBottomSheet(
                           context: context,
                           builder: (_) => SafeArea(
@@ -555,7 +756,8 @@ class GoatDetailView extends ConsumerWidget {
                                           TextStyle(color: Colors.red)),
                                   onTap: () {
                                     Navigator.pop(context);
-                                    _confirmDeleteHealth(context, ref, r);
+                                    _confirmDeleteHealth(
+                                        context, ref, r);
                                   },
                                 ),
                               ],
@@ -573,7 +775,7 @@ class GoatDetailView extends ConsumerWidget {
                   Text('Error loading health logs: $err'),
             ),
 
-            const Divider(height: 40, thickness: 2),
+            const Divider(height: 32, thickness: 1),
 
             // ================================================================
             // ⚖️ SECTION 3: WEIGHT RECORDS
@@ -606,7 +808,8 @@ class GoatDetailView extends ConsumerWidget {
                         leading:
                             const Icon(Icons.scale, color: Colors.teal),
                         title: Text('${r.weightKg} kg'),
-                        subtitle: r.notes != null ? Text(r.notes!) : null,
+                        subtitle:
+                            r.notes != null ? Text(r.notes!) : null,
                         trailing: Text(
                             '${r.date.day}/${r.date.month}/${r.date.year}'),
                         onTap: () => showModalBottomSheet(
@@ -632,7 +835,8 @@ class GoatDetailView extends ConsumerWidget {
                                           TextStyle(color: Colors.red)),
                                   onTap: () {
                                     Navigator.pop(context);
-                                    _confirmDeleteWeight(context, ref, r);
+                                    _confirmDeleteWeight(
+                                        context, ref, r);
                                   },
                                 ),
                               ],
@@ -650,7 +854,7 @@ class GoatDetailView extends ConsumerWidget {
                   Text('Error loading weight records: $err'),
             ),
 
-            const Divider(height: 40, thickness: 2),
+            const Divider(height: 32, thickness: 1),
 
             // ================================================================
             // 🐣 SECTION 4: BREEDING RECORDS
@@ -684,8 +888,9 @@ class GoatDetailView extends ConsumerWidget {
                         leading: const Icon(Icons.favorite,
                             color: Colors.pink),
                         title: Text(
-                            'Mated ${r.matingDate.day}/${r.matingDate.month}/${r.matingDate.year}'
-                            '${r.sireTagId != null ? " • Buck: ${r.sireTagId}" : ""}'),
+                          'Mated ${r.matingDate.day}/${r.matingDate.month}/${r.matingDate.year}'
+                          '${r.sireTagId != null ? " • Buck: ${r.sireTagId}" : ""}',
+                        ),
                         subtitle: Text(
                           'Outcome: ${r.outcome}'
                           '${kidding != null ? "\nExpected Kidding: ${kidding.day}/${kidding.month}/${kidding.year}" : ""}'
@@ -735,41 +940,9 @@ class GoatDetailView extends ConsumerWidget {
                   Text('Error loading breeding records: $err'),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
           ],
         ),
-      ),
-    );
-  }
-
-  // Shared section header widget
-  Widget _sectionHeader({
-    required String title,
-    required IconData icon,
-    required Color color,
-    VoidCallback? onAdd,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 8),
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          if (onAdd != null)
-            TextButton.icon(
-              onPressed: onAdd,
-              icon: Icon(Icons.add, color: color),
-              label: Text('Add', style: TextStyle(color: color)),
-            ),
-        ],
       ),
     );
   }

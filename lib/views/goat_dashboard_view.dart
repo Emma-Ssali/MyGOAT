@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/goat.dart';
 import '../services/providers.dart';
+import 'goat_detail_view.dart';
 
 class GoatDashboardView extends ConsumerStatefulWidget {
   const GoatDashboardView({super.key});
@@ -13,7 +14,7 @@ class GoatDashboardView extends ConsumerStatefulWidget {
 }
 
 class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
-  
+
   Future<void> _handleRefresh() async {
     ref.invalidate(watchGoatsProvider);
     await Future.delayed(const Duration(milliseconds: 800));
@@ -26,7 +27,7 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'MyGOAT Ledger', 
+          'MyGOAT Ledger',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.green.shade700,
@@ -67,7 +68,7 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
                             const SizedBox(height: 12),
                             Center(
                               child: Text(
-                                'No livestock registered yet.\nPull down to refresh page layout.', 
+                                'No livestock registered yet.\nPull down to refresh page layout.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
                               ),
@@ -80,11 +81,17 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
                           itemBuilder: (context, index) {
                             final goat = goatList[index];
                             final formattedDob = "${goat.dateOfBirth.toLocal()}".split(' ')[0];
-                            
+
                             return Card(
                               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               child: ListTile(
-                                onTap: () => _showGoatModal(context, existingGoat: goat),
+                                // TAP card → open GoatDetailView with all sections
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => GoatDetailView(goat: goat),
+                                  ),
+                                ),
                                 leading: CircleAvatar(
                                   backgroundColor: Colors.green.shade100,
                                   backgroundImage: goat.photoPath != null
@@ -95,18 +102,20 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
                                       : null,
                                 ),
                                 title: Text(
-                                  goat.tagId.isEmpty ? 'UNTAGGED ANIMAL' : 'Tag ID: ${goat.tagId}', 
+                                  goat.tagId.isEmpty ? 'UNTAGGED ANIMAL' : 'Tag ID: ${goat.tagId}',
                                   style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                                // CHANGED: subtitle now shows gender and status too
                                 subtitle: Text(
                                   'Breed: ${goat.breed} | ${goat.gender} | DoB: $formattedDob\nMass: ${goat.weight} kg | Status: ${goat.status}',
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.edit, size: 20, color: Colors.green.shade700),
-                                    const SizedBox(width: 8),
+                                    // EDIT icon → open the edit modal only
+                                    IconButton(
+                                      icon: Icon(Icons.edit, size: 20, color: Colors.green.shade700),
+                                      onPressed: () => _showGoatModal(context, existingGoat: goat),
+                                    ),
                                     Icon(Icons.chevron_right, color: Colors.grey.shade400),
                                   ],
                                 ),
@@ -167,13 +176,14 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
 
   void _showGoatModal(BuildContext context, {Goat? existingGoat}) {
     final isEditing = existingGoat != null;
-    
+
     final tagController = TextEditingController(text: existingGoat?.tagId ?? '');
     final breedController = TextEditingController(text: existingGoat?.breed ?? '');
-    final weightController = TextEditingController(text: existingGoat?.weight != null ? existingGoat!.weight.toString() : '');
-    final acquisitionNoteController = TextEditingController(text: existingGoat?.acquisitionNote ?? '');
+    final weightController = TextEditingController(
+        text: existingGoat?.weight != null ? existingGoat!.weight.toString() : '');
+    final acquisitionNoteController =
+        TextEditingController(text: existingGoat?.acquisitionNote ?? '');
 
-    // NEW: dropdown state variables
     String selectedGender = existingGoat?.gender ?? 'Male';
     String selectedStatus = existingGoat?.status ?? 'Active';
     String selectedAcquisitionSource = existingGoat?.acquisitionSource ?? 'Purchased';
@@ -181,16 +191,18 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
     DateTime selectedBirthDate = existingGoat?.dateOfBirth ?? DateTime.now();
     DateTime selectedAcquisitionDate = existingGoat?.dateOfAcquisition ?? DateTime.now();
 
-    final dobController = TextEditingController(text: "${selectedBirthDate.toLocal()}".split(' ')[0]);
-    final acquisitionDateController = TextEditingController(text: "${selectedAcquisitionDate.toLocal()}".split(' ')[0]);
-    
-    File? selectedImage = existingGoat?.photoPath != null 
-        ? File(existingGoat!.photoPath!) 
-        : null;
+    final dobController = TextEditingController(
+        text: "${selectedBirthDate.toLocal()}".split(' ')[0]);
+    final acquisitionDateController = TextEditingController(
+        text: "${selectedAcquisitionDate.toLocal()}".split(' ')[0]);
+
+    File? selectedImage =
+        existingGoat?.photoPath != null ? File(existingGoat!.photoPath!) : null;
 
     Future<void> pickImage(ImageSource source, StateSetter setModalState) async {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: source, imageQuality: 85);
+      final XFile? image =
+          await picker.pickImage(source: source, imageQuality: 85);
       if (image != null) {
         setModalState(() {
           selectedImage = File(image.path);
@@ -198,7 +210,8 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
       }
     }
 
-    void showImageSourceOptions(BuildContext context, StateSetter setModalState) {
+    void showImageSourceOptions(
+        BuildContext context, StateSetter setModalState) {
       showModalBottomSheet(
         context: context,
         builder: (context) => SafeArea(
@@ -229,14 +242,17 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16, right: 16, top: 20,
+                left: 16,
+                right: 16,
+                top: 20,
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -244,77 +260,93 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      isEditing ? 'Modify Goat Profile' : 'Register New Goat Profile', 
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                      isEditing ? 'Modify Goat Profile' : 'Register New Goat Profile',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade800),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Photo picker
                     Center(
                       child: GestureDetector(
-                        onTap: () => showImageSourceOptions(context, setModalState),
+                        onTap: () =>
+                            showImageSourceOptions(context, setModalState),
                         child: Container(
                           height: 100,
                           width: 100,
                           decoration: BoxDecoration(
                             color: Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(50),
-                            border: Border.all(color: Colors.green.shade700, width: 2),
+                            border: Border.all(
+                                color: Colors.green.shade700, width: 2),
                             image: selectedImage != null
-                                ? DecorationImage(image: FileImage(selectedImage!), fit: BoxFit.cover)
+                                ? DecorationImage(
+                                    image: FileImage(selectedImage!),
+                                    fit: BoxFit.cover)
                                 : null,
                           ),
                           child: selectedImage == null
-                              ? Icon(Icons.add_a_photo, size: 32, color: Colors.green.shade700)
+                              ? Icon(Icons.add_a_photo,
+                                  size: 32, color: Colors.green.shade700)
                               : null,
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    // Ear Tag
                     TextField(
                       controller: tagController,
-                      decoration: const InputDecoration(labelText: 'Ear Tag ID Number', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                          labelText: 'Ear Tag ID Number',
+                          border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 12),
 
-                    // Breed
                     TextField(
                       controller: breedController,
-                      decoration: const InputDecoration(labelText: 'Breed (e.g., Boer, Savanna)', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                          labelText: 'Breed (e.g., Boer, Savanna)',
+                          border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 12),
 
-                    // Weight
                     TextField(
                       controller: weightController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Weight (kg)', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                          labelText: 'Weight (kg)',
+                          border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 12),
 
-                    // NEW: Sex dropdown
                     DropdownButtonFormField<String>(
                       value: selectedGender,
-                      decoration: const InputDecoration(labelText: 'Sex', border: OutlineInputBorder()),
-                      items: ['Male', 'Female'].map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
-                      onChanged: (val) => setModalState(() => selectedGender = val!),
+                      decoration: const InputDecoration(
+                          labelText: 'Sex', border: OutlineInputBorder()),
+                      items: ['Male', 'Female']
+                          .map((g) =>
+                              DropdownMenuItem(value: g, child: Text(g)))
+                          .toList(),
+                      onChanged: (val) =>
+                          setModalState(() => selectedGender = val!),
                     ),
                     const SizedBox(height: 12),
 
-                    // NEW: Status dropdown
                     DropdownButtonFormField<String>(
                       value: selectedStatus,
-                      decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                          labelText: 'Status', border: OutlineInputBorder()),
                       items: ['Active', 'Sold', 'Dead', 'Missing']
-                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .map((s) =>
+                              DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
-                      onChanged: (val) => setModalState(() => selectedStatus = val!),
+                      onChanged: (val) =>
+                          setModalState(() => selectedStatus = val!),
                     ),
                     const SizedBox(height: 12),
 
-                    // NEW: Date of Birth
                     TextField(
                       controller: dobController,
                       readOnly: true,
@@ -333,14 +365,14 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
                         if (pickedDate != null) {
                           setModalState(() {
                             selectedBirthDate = pickedDate;
-                            dobController.text = "${pickedDate.toLocal()}".split(' ')[0];
+                            dobController.text =
+                                "${pickedDate.toLocal()}".split(' ')[0];
                           });
                         }
                       },
                     ),
                     const SizedBox(height: 12),
 
-                    // NEW: Date of Acquisition (separate from DoB)
                     TextField(
                       controller: acquisitionDateController,
                       readOnly: true,
@@ -359,25 +391,28 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
                         if (pickedDate != null) {
                           setModalState(() {
                             selectedAcquisitionDate = pickedDate;
-                            acquisitionDateController.text = "${pickedDate.toLocal()}".split(' ')[0];
+                            acquisitionDateController.text =
+                                "${pickedDate.toLocal()}".split(' ')[0];
                           });
                         }
                       },
                     ),
                     const SizedBox(height: 12),
 
-                    // NEW: Source of Acquisition dropdown
                     DropdownButtonFormField<String>(
                       value: selectedAcquisitionSource,
-                      decoration: const InputDecoration(labelText: 'Source of Acquisition', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                          labelText: 'Source of Acquisition',
+                          border: OutlineInputBorder()),
                       items: ['Purchased', 'Born on Farm', 'Donated', 'Gift', 'Other']
-                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .map((s) =>
+                              DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
-                      onChanged: (val) => setModalState(() => selectedAcquisitionSource = val!),
+                      onChanged: (val) =>
+                          setModalState(() => selectedAcquisitionSource = val!),
                     ),
                     const SizedBox(height: 12),
 
-                    // NEW: free text note — only shows when 'Other' is selected
                     if (selectedAcquisitionSource == 'Other') ...[
                       TextField(
                         controller: acquisitionNoteController,
@@ -391,31 +426,35 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
 
                     const SizedBox(height: 8),
 
-                    // Save button
                     Consumer(
                       builder: (context, ref, child) {
                         return ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade700, 
+                            backgroundColor: Colors.green.shade700,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           onPressed: () async {
                             final tagText = tagController.text.trim();
 
-                            // Duplicate tag check
                             if (tagText.isNotEmpty) {
-                              final existing = await ref.read(farmRepositoryProvider).findGoatByTag(tagText);
-                              final isDuplicate = existing != null && existing.id != existingGoat?.id;
+                              final existing = await ref
+                                  .read(farmRepositoryProvider)
+                                  .findGoatByTag(tagText);
+                              final isDuplicate = existing != null &&
+                                  existing.id != existingGoat?.id;
                               if (isDuplicate && context.mounted) {
                                 showDialog(
                                   context: context,
                                   builder: (context) => AlertDialog(
                                     title: const Text('Duplicate Tag Number'),
-                                    content: Text('Tag "$tagText" is already assigned to another animal. Please use a different tag number.'),
+                                    content: Text(
+                                        'Tag "$tagText" is already assigned to another animal. Please use a different tag number.'),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.pop(context),
-                                        child: const Text('OK', style: TextStyle(color: Colors.green)),
+                                        child: const Text('OK',
+                                            style: TextStyle(
+                                                color: Colors.green)),
                                       ),
                                     ],
                                   ),
@@ -423,33 +462,45 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
                                 return;
                               }
                             }
-                            
-                            final goatToSave = isEditing ? existingGoat! : Goat();
-                            
+
+                            final goatToSave =
+                                isEditing ? existingGoat! : Goat();
+
                             goatToSave
                               ..tagId = tagText
                               ..breed = breedController.text.trim()
-                              ..weight = double.tryParse(weightController.text) ?? 0.0
-                              ..gender = selectedGender           // NEW
-                              ..status = selectedStatus           // NEW
+                              ..weight =
+                                  double.tryParse(weightController.text) ?? 0.0
+                              ..gender = selectedGender
+                              ..status = selectedStatus
                               ..dateOfBirth = selectedBirthDate
-                              ..dateOfAcquisition = selectedAcquisitionDate  // NEW
-                              ..acquisitionSource = selectedAcquisitionSource // NEW
-                              ..acquisitionNote = selectedAcquisitionSource == 'Other'
-                                  ? acquisitionNoteController.text.trim()
-                                  : null                          // NEW
+                              ..dateOfAcquisition = selectedAcquisitionDate
+                              ..acquisitionSource = selectedAcquisitionSource
+                              ..acquisitionNote =
+                                  selectedAcquisitionSource == 'Other'
+                                      ? acquisitionNoteController.text.trim()
+                                      : null
                               ..isTagged = tagText.isNotEmpty
-                              ..createdAt = existingGoat?.createdAt ?? DateTime.now()
+                              ..createdAt =
+                                  existingGoat?.createdAt ?? DateTime.now()
                               ..lastSyncedAt = DateTime.now().toUtc()
-                              ..photoPath = selectedImage?.path ?? existingGoat?.photoPath;
+                              ..photoPath = selectedImage?.path ??
+                                  existingGoat?.photoPath;
 
-                            await ref.read(farmRepositoryProvider).addOrUpdateGoat(goatToSave);
+                            await ref
+                                .read(farmRepositoryProvider)
+                                .addOrUpdateGoat(goatToSave);
 
                             if (context.mounted) Navigator.pop(context);
                           },
                           child: Text(
-                            isEditing ? 'Apply Changes to Profile' : 'Save Data Profile to Herd Ledger', 
-                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            isEditing
+                                ? 'Apply Changes to Profile'
+                                : 'Save Data Profile to Herd Ledger',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold),
                           ),
                         );
                       },
@@ -459,19 +510,26 @@ class _GoatDashboardViewState extends ConsumerState<GoatDashboardView> {
                       const SizedBox(height: 10),
                       TextButton(
                         onPressed: () async {
-                          final confirmed = await _showDeleteConfirmation(context);
+                          final confirmed =
+                              await _showDeleteConfirmation(context);
                           if (confirmed == true && existingGoat.id != null) {
-                            await ref.read(farmRepositoryProvider).deleteGoat(existingGoat.id!);
+                            await ref
+                                .read(farmRepositoryProvider)
+                                .deleteGoat(existingGoat.id!);
                             if (context.mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Livestock profile removed from ledger')),
+                                const SnackBar(
+                                    content: Text(
+                                        'Livestock profile removed from ledger')),
                               );
                             }
                           }
                         },
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
-                        child: const Text('Delete Goat Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                        style:
+                            TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Delete Goat Profile',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ],
                     const SizedBox(height: 20),
