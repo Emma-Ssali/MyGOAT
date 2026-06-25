@@ -69,7 +69,8 @@ class FarmRepository {
         .watch(fireImmediately: true);
   }
 
-  Future<void> saveHealthRecord(HealthRecord record, {bool logExpense = true}) async {
+  Future<void> saveHealthRecord(HealthRecord record,
+      {bool logExpense = true}) async {
     await isar.writeTxn(() async {
       String? tagId;
       if (record.goatId != null) {
@@ -82,7 +83,8 @@ class FarmRepository {
       if (shouldHaveExpense) {
         FinancialTransaction transaction;
         if (record.linkedTransactionId != null) {
-          final existing = await isar.financialTransactions.get(record.linkedTransactionId!);
+          final existing =
+              await isar.financialTransactions.get(record.linkedTransactionId!);
           transaction = existing ?? FinancialTransaction();
         } else {
           transaction = FinancialTransaction();
@@ -97,7 +99,8 @@ class FarmRepository {
           ..lastSyncedAt = DateTime.now()
           ..linkedGoatTagId = tagId;
 
-        final transactionId = await isar.financialTransactions.put(transaction);
+        final transactionId =
+            await isar.financialTransactions.put(transaction);
         record.linkedTransactionId = transactionId;
       } else if (record.linkedTransactionId != null) {
         await isar.financialTransactions.delete(record.linkedTransactionId!);
@@ -130,15 +133,48 @@ class FarmRepository {
         .watch(fireImmediately: true);
   }
 
+  // Saves weight record AND updates the goat's current weight field
+  // so the profile header always shows the latest measurement.
   Future<void> saveWeightRecord(WeightRecord record) async {
     await isar.writeTxn(() async {
       await isar.weightRecords.put(record);
+
+      final goat = await isar.goats.get(record.goatId);
+      if (goat != null) {
+        // Only update goat weight if this is the most recent record
+        final latestRecord = await isar.weightRecords
+            .filter()
+            .goatIdEqualTo(record.goatId)
+            .sortByDateDesc()
+            .findFirst();
+        if (latestRecord?.id == record.id ||
+            latestRecord?.date == record.date) {
+          goat.weight = record.weightKg;
+          await isar.goats.put(goat);
+        }
+      }
     });
   }
 
   Future<bool> deleteWeightRecord(Id id) async {
     return await isar.writeTxn(() async {
-      return await isar.weightRecords.delete(id);
+      final record = await isar.weightRecords.get(id);
+      final deleted = await isar.weightRecords.delete(id);
+
+      // After deletion, update goat weight to the new latest record
+      if (deleted && record != null) {
+        final latest = await isar.weightRecords
+            .filter()
+            .goatIdEqualTo(record.goatId)
+            .sortByDateDesc()
+            .findFirst();
+        final goat = await isar.goats.get(record.goatId);
+        if (goat != null && latest != null) {
+          goat.weight = latest.weightKg;
+          await isar.goats.put(goat);
+        }
+      }
+      return deleted;
     });
   }
 

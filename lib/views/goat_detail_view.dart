@@ -1,6 +1,9 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mygoat/models/goat.dart';
 import 'package:mygoat/models/transaction.dart';
 import 'package:mygoat/models/health_record.dart';
 import 'package:mygoat/models/weight_record.dart';
@@ -13,12 +16,376 @@ class GoatDetailView extends ConsumerWidget {
   const GoatDetailView({super.key, required this.goat});
 
   // =========================================================================
+  // 🐐 EDIT GOAT SHEET
+  // =========================================================================
+  void _showEditGoatSheet(BuildContext context, WidgetRef ref) {
+    final tagController = TextEditingController(text: goat.tagId ?? '');
+    final breedController = TextEditingController(text: goat.breed ?? '');
+    final weightController =
+        TextEditingController(text: goat.weight?.toString() ?? '');
+    final acquisitionNoteController =
+        TextEditingController(text: goat.acquisitionNote ?? '');
+
+    String selectedGender = goat.gender ?? 'Male';
+    String selectedStatus = goat.status ?? 'Active';
+    String selectedAcquisitionSource = goat.acquisitionSource ?? 'Purchased';
+    DateTime selectedBirthDate = goat.dateOfBirth ?? DateTime.now();
+    DateTime selectedAcquisitionDate = goat.dateOfAcquisition ?? DateTime.now();
+
+    final dobController = TextEditingController(
+        text: "${selectedBirthDate.toLocal()}".split(' ')[0]);
+    final acquisitionDateController = TextEditingController(
+        text: "${selectedAcquisitionDate.toLocal()}".split(' ')[0]);
+
+    File? selectedImage =
+        goat.photoPath != null ? File(goat.photoPath!) : null;
+
+    Future<void> pickImage(
+        ImageSource source, StateSetter setModalState) async {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: source, imageQuality: 85);
+      if (image != null) {
+        setModalState(() => selectedImage = File(image.path));
+      }
+    }
+
+    void showImageOptions(BuildContext ctx, StateSetter setModalState) {
+      showModalBottomSheet(
+        context: ctx,
+        builder: (_) => SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  pickImage(ImageSource.camera, setModalState);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  pickImage(ImageSource.gallery, setModalState);
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Edit Goat Profile',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade800),
+                ),
+                const SizedBox(height: 16),
+
+                // Photo picker
+                Center(
+                  child: GestureDetector(
+                    onTap: () => showImageOptions(context, setModalState),
+                    child: Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(50),
+                        border: Border.all(
+                            color: Colors.green.shade700, width: 2),
+                        image: selectedImage != null
+                            ? DecorationImage(
+                                image: FileImage(selectedImage!),
+                                fit: BoxFit.cover)
+                            : null,
+                      ),
+                      child: selectedImage == null
+                          ? Icon(Icons.add_a_photo,
+                              size: 32, color: Colors.green.shade700)
+                          : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                TextField(
+                  controller: tagController,
+                  decoration: const InputDecoration(
+                      labelText: 'Ear Tag ID',
+                      border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+
+                TextField(
+                  controller: breedController,
+                  decoration: const InputDecoration(
+                      labelText: 'Breed',
+                      border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+
+                TextField(
+                  controller: weightController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                      labelText: 'Weight (kg)',
+                      border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  value: selectedGender,
+                  decoration: const InputDecoration(
+                      labelText: 'Sex', border: OutlineInputBorder()),
+                  items: ['Male', 'Female']
+                      .map((g) =>
+                          DropdownMenuItem(value: g, child: Text(g)))
+                      .toList(),
+                  onChanged: (val) {
+                    setModalState(() => selectedGender = val!);
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  value: selectedStatus,
+                  decoration: const InputDecoration(
+                      labelText: 'Status', border: OutlineInputBorder()),
+                  items: ['Active', 'Sold', 'Dead', 'Missing']
+                      .map((s) =>
+                          DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (val) {
+                    setModalState(() => selectedStatus = val!);
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                TextField(
+                  controller: dobController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Date of Birth',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedBirthDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      setModalState(() {
+                        selectedBirthDate = picked;
+                        dobController.text =
+                            "${picked.toLocal()}".split(' ')[0];
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                TextField(
+                  controller: acquisitionDateController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Date of Acquisition',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedAcquisitionDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      setModalState(() {
+                        selectedAcquisitionDate = picked;
+                        acquisitionDateController.text =
+                            "${picked.toLocal()}".split(' ')[0];
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  value: selectedAcquisitionSource,
+                  decoration: const InputDecoration(
+                      labelText: 'Source of Acquisition',
+                      border: OutlineInputBorder()),
+                  items: ['Purchased', 'Born on Farm', 'Donated', 'Gift', 'Other']
+                      .map((s) =>
+                          DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (val) {
+                    setModalState(() => selectedAcquisitionSource = val!);
+                  },
+                ),
+                if (selectedAcquisitionSource == 'Other') ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: acquisitionNoteController,
+                    decoration: const InputDecoration(
+                        labelText: 'Please specify source',
+                        border: OutlineInputBorder()),
+                  ),
+                ],
+                const SizedBox(height: 16),
+
+                Consumer(
+                  builder: (context, ref, _) => ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () async {
+                      final tagText = tagController.text.trim();
+                      if (tagText.isNotEmpty) {
+                        final existing = await ref
+                            .read(farmRepositoryProvider)
+                            .findGoatByTag(tagText);
+                        final isDuplicate =
+                            existing != null && existing.id != goat.id;
+                        if (isDuplicate && context.mounted) {
+                          showDialog(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text('Duplicate Tag Number'),
+                              content: Text(
+                                  'Tag "$tagText" is already assigned to another animal.'),
+                              actions: [
+                                TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('OK')),
+                              ],
+                            ),
+                          );
+                          return;
+                        }
+                      }
+
+                      final goatToSave = goat as Goat;
+                      goatToSave
+                        ..tagId = tagText
+                        ..breed = breedController.text.trim()
+                        ..weight =
+                            double.tryParse(weightController.text) ?? 0.0
+                        ..gender = selectedGender
+                        ..status = selectedStatus
+                        ..dateOfBirth = selectedBirthDate
+                        ..dateOfAcquisition = selectedAcquisitionDate
+                        ..acquisitionSource = selectedAcquisitionSource
+                        ..acquisitionNote =
+                            selectedAcquisitionSource == 'Other'
+                                ? acquisitionNoteController.text.trim()
+                                : null
+                        ..isTagged = tagText.isNotEmpty
+                        ..lastSyncedAt = DateTime.now().toUtc()
+                        ..photoPath =
+                            selectedImage?.path ?? goat.photoPath;
+
+                      await ref
+                          .read(farmRepositoryProvider)
+                          .addOrUpdateGoat(goatToSave);
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text(
+                      'Apply Changes',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =========================================================================
+  // 🗑️ DELETE GOAT
+  // =========================================================================
+  void _confirmDeleteGoat(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Goat Profile?'),
+        content: Text(
+            'Permanently delete goat ${goat.tagId}? This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              if (goat.id != null) {
+                await ref
+                    .read(farmRepositoryProvider)
+                    .deleteGoat(goat.id!);
+              }
+              if (context.mounted) {
+                Navigator.pop(context);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Goat profile deleted from ledger.')),
+                );
+              }
+            },
+            child: const Text('Delete',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =========================================================================
   // 🐐 PROFILE HEADER
   // =========================================================================
-  Widget _buildProfileHeader(BuildContext context) {
+  Widget _buildProfileHeader(BuildContext context, double currentWeight) {
     final dob = goat.dateOfBirth as DateTime;
     final now = DateTime.now();
-    final ageMonths = (now.year - dob.year) * 12 + now.month - dob.month;
+    final ageMonths =
+        (now.year - dob.year) * 12 + now.month - dob.month;
     final ageText = ageMonths >= 12
         ? '${(ageMonths / 12).floor()} yr ${ageMonths % 12} mo'
         : '$ageMonths months';
@@ -37,7 +404,6 @@ class GoatDetailView extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       child: Column(
         children: [
-          // Photo
           CircleAvatar(
             radius: 48,
             backgroundColor: Colors.green.shade300,
@@ -49,8 +415,6 @@ class GoatDetailView extends ConsumerWidget {
                 : null,
           ),
           const SizedBox(height: 12),
-
-          // Tag ID
           Text(
             goat.tagId?.isNotEmpty == true ? goat.tagId : 'Untagged',
             style: const TextStyle(
@@ -59,27 +423,23 @@ class GoatDetailView extends ConsumerWidget {
                 color: Colors.white),
           ),
           const SizedBox(height: 4),
-
-          // Status badge
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
               color: statusColor.withOpacity(0.2),
-              border: Border.all(color: statusColor),
+              border: Border.all(color: Colors.white70),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               goat.status ?? 'Unknown',
-              style: TextStyle(
+              style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
                   fontSize: 13),
             ),
           ),
           const SizedBox(height: 16),
-
-          // Info grid
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -90,7 +450,8 @@ class GoatDetailView extends ConsumerWidget {
               children: [
                 _infoTile('Breed', goat.breed ?? '-'),
                 _infoTile('Gender', goat.gender ?? '-'),
-                _infoTile('Weight', '${goat.weight ?? 0} kg'),
+                _infoTile('Weight',
+                    '${currentWeight.toStringAsFixed(1)} kg'),
                 _infoTile('Age', ageText),
               ],
             ),
@@ -104,15 +465,13 @@ class GoatDetailView extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                _infoTile('DoB',
-                    '${dob.day}/${dob.month}/${dob.year}'),
+                _infoTile('DoB', '${dob.day}/${dob.month}/${dob.year}'),
                 _infoTile(
                     'Acquired',
                     goat.dateOfAcquisition != null
                         ? '${(goat.dateOfAcquisition as DateTime).day}/${(goat.dateOfAcquisition as DateTime).month}/${(goat.dateOfAcquisition as DateTime).year}'
                         : '-'),
-                _infoTile(
-                    'Source', goat.acquisitionSource ?? '-'),
+                _infoTile('Source', goat.acquisitionSource ?? '-'),
               ],
             ),
           ),
@@ -143,6 +502,145 @@ class GoatDetailView extends ConsumerWidget {
   }
 
   // =========================================================================
+  // 📈 WEIGHT TREND CHART
+  // =========================================================================
+  Widget _buildWeightTrend(List<WeightRecord> records) {
+    if (records.length < 2) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Text(
+          'Log at least 2 weight entries to see a trend.',
+          style: TextStyle(color: Colors.grey, fontSize: 13),
+        ),
+      );
+    }
+
+    final sorted = records.reversed.toList();
+    final weights = sorted.map((r) => r.weightKg).toList();
+    final minW = weights.reduce(min);
+    final maxW = weights.reduce(max);
+    final range = (maxW - minW).clamp(1.0, double.infinity);
+
+    final first = weights.first;
+    final last = weights.last;
+    final diff = last - first;
+    final diffText = diff >= 0
+        ? '+${diff.toStringAsFixed(1)} kg'
+        : '${diff.toStringAsFixed(1)} kg';
+    final diffColor = diff >= 0 ? Colors.green : Colors.red;
+    final diffIcon =
+        diff >= 0 ? Icons.trending_up : Icons.trending_down;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Card(
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Weight Trend',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 14)),
+                  Row(
+                    children: [
+                      Icon(diffIcon, color: diffColor, size: 18),
+                      const SizedBox(width: 4),
+                      Text(diffText,
+                          style: TextStyle(
+                              color: diffColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 80,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: sorted.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final r = entry.value;
+                    final barHeight =
+                        ((r.weightKg - minW) / range * 60) + 20;
+                    final isLast = i == sorted.length - 1;
+                    final isFirst = i == 0;
+
+                    Color barColor;
+                    if (isFirst) {
+                      barColor = Colors.teal.shade300;
+                    } else if (r.weightKg > sorted[i - 1].weightKg) {
+                      barColor = Colors.green;
+                    } else if (r.weightKg < sorted[i - 1].weightKg) {
+                      barColor = Colors.red.shade400;
+                    } else {
+                      barColor = Colors.grey;
+                    }
+
+                    return Expanded(
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 2),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (isLast || isFirst)
+                              Text(
+                                '${r.weightKg.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: barColor,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            const SizedBox(height: 2),
+                            Container(
+                              height: barHeight,
+                              decoration: BoxDecoration(
+                                color: barColor,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${r.date.day}/${r.date.month}',
+                              style: const TextStyle(
+                                  fontSize: 8, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Min: ${minW.toStringAsFixed(1)} kg',
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.grey)),
+                  Text('Max: ${maxW.toStringAsFixed(1)} kg',
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.grey)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =========================================================================
   // 🩺 HEALTH DIALOG
   // =========================================================================
   void _showHealthDialog(BuildContext context, WidgetRef ref,
@@ -160,8 +658,8 @@ class GoatDetailView extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title:
-              Text(isEditing ? 'Edit Medical Care' : 'Log New Medical Care'),
+          title: Text(
+              isEditing ? 'Edit Medical Care' : 'Log New Medical Care'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -178,7 +676,9 @@ class GoatDetailView extends ConsumerWidget {
                           DropdownMenuItem(value: t, child: Text(t)))
                       .toList(),
                   onChanged: (val) {
-                    if (val != null) setState(() => chosenType = val);
+                    if (val != null) {
+                      setState(() => chosenType = val);
+                    }
                   },
                   decoration:
                       const InputDecoration(labelText: 'Care Type'),
@@ -225,7 +725,9 @@ class GoatDetailView extends ConsumerWidget {
                 await ref
                     .read(farmRepositoryProvider)
                     .saveHealthRecord(record);
-                if (context.mounted) Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
               },
               child: Text(isEditing ? 'Update' : 'Save'),
             ),
@@ -257,7 +759,8 @@ class GoatDetailView extends ConsumerWidget {
               controller: weightController,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Weight (kg)'),
+              decoration:
+                  const InputDecoration(labelText: 'Weight (kg)'),
             ),
             TextField(
               controller: notesController,
@@ -273,7 +776,9 @@ class GoatDetailView extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               final kg = double.tryParse(weightController.text);
-              if (kg == null || kg <= 0) return;
+              if (kg == null || kg <= 0) {
+                return;
+              }
               final record = existing ?? WeightRecord();
               record
                 ..goatId = goat.id
@@ -285,7 +790,9 @@ class GoatDetailView extends ConsumerWidget {
               await ref
                   .read(farmRepositoryProvider)
                   .saveWeightRecord(record);
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
             child: Text(isEditing ? 'Update' : 'Save'),
           ),
@@ -333,7 +840,9 @@ class GoatDetailView extends ConsumerWidget {
                       firstDate: DateTime(2000),
                       lastDate: DateTime.now(),
                     );
-                    if (picked != null) setState(() => matingDate = picked);
+                    if (picked != null) {
+                      setState(() => matingDate = picked);
+                    }
                   },
                 ),
                 TextField(
@@ -348,9 +857,12 @@ class GoatDetailView extends ConsumerWidget {
                           DropdownMenuItem(value: o, child: Text(o)))
                       .toList(),
                   onChanged: (val) {
-                    if (val != null) setState(() => chosenOutcome = val);
+                    if (val != null) {
+                      setState(() => chosenOutcome = val);
+                    }
                   },
-                  decoration: const InputDecoration(labelText: 'Outcome'),
+                  decoration:
+                      const InputDecoration(labelText: 'Outcome'),
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -367,8 +879,9 @@ class GoatDetailView extends ConsumerWidget {
                       if (expectedKidding != null)
                         IconButton(
                           icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () =>
-                              setState(() => expectedKidding = null),
+                          onPressed: () {
+                            setState(() => expectedKidding = null);
+                          },
                         ),
                     ],
                   ),
@@ -394,8 +907,8 @@ class GoatDetailView extends ConsumerWidget {
                   ),
                 TextField(
                   controller: notesController,
-                  decoration:
-                      const InputDecoration(labelText: 'Notes (optional)'),
+                  decoration: const InputDecoration(
+                      labelText: 'Notes (optional)'),
                 ),
               ],
             ),
@@ -424,7 +937,9 @@ class GoatDetailView extends ConsumerWidget {
                 await ref
                     .read(farmRepositoryProvider)
                     .saveBreedingRecord(record);
-                if (context.mounted) Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
               },
               child: Text(isEditing ? 'Update' : 'Save'),
             ),
@@ -444,7 +959,8 @@ class GoatDetailView extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Delete Health Record?'),
         content: Text(
-            'Delete "${record.recordType}: ${record.title}"? This will also remove its linked expense.'),
+            'Delete "${record.recordType}: ${record.title}"? '
+            'This will also remove its linked expense.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
@@ -458,9 +974,12 @@ class GoatDetailView extends ConsumerWidget {
                     .read(farmRepositoryProvider)
                     .deleteHealthRecord(record.id!);
               }
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
-            child: const Text('Delete'),
+            child: const Text('Delete',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -474,7 +993,8 @@ class GoatDetailView extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Delete Weight Record?'),
         content: Text(
-            'Delete the ${record.weightKg}kg entry from ${record.date.day}/${record.date.month}/${record.date.year}?'),
+            'Delete the ${record.weightKg}kg entry from '
+            '${record.date.day}/${record.date.month}/${record.date.year}?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
@@ -488,9 +1008,12 @@ class GoatDetailView extends ConsumerWidget {
                     .read(farmRepositoryProvider)
                     .deleteWeightRecord(record.id!);
               }
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
-            child: const Text('Delete'),
+            child: const Text('Delete',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -517,9 +1040,12 @@ class GoatDetailView extends ConsumerWidget {
                     .read(farmRepositoryProvider)
                     .deleteBreedingRecord(record.id!);
               }
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
-            child: const Text('Delete'),
+            child: const Text('Delete',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -527,7 +1053,7 @@ class GoatDetailView extends ConsumerWidget {
   }
 
   // =========================================================================
-  // SECTION HEADER WIDGET
+  // SECTION HEADER
   // =========================================================================
   Widget _sectionHeader({
     required String title,
@@ -575,12 +1101,31 @@ class GoatDetailView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final amountController = TextEditingController();
+    final weightRecordsAsync =
+        ref.watch(watchWeightRecordsProvider(goat.id!));
+    final weightRecords = weightRecordsAsync.value ?? [];
+
+    final currentWeight = weightRecords.isNotEmpty
+        ? weightRecords.first.weightKg
+        : (goat.weight as double? ?? 0.0);
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Goat ${goat.tagId ?? ""} Details'),
         backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white),
+            tooltip: 'Edit Profile',
+            onPressed: () => _showEditGoatSheet(context, ref),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.white),
+            tooltip: 'Delete Goat',
+            onPressed: () => _confirmDeleteGoat(context, ref),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -590,7 +1135,7 @@ class GoatDetailView extends ConsumerWidget {
             // ================================================================
             // 🐐 PROFILE HEADER
             // ================================================================
-            _buildProfileHeader(context),
+            _buildProfileHeader(context, currentWeight),
 
             // ================================================================
             // 💸 SECTION 1: FINANCIAL LEDGER
@@ -680,7 +1225,9 @@ class GoatDetailView extends ConsumerWidget {
                       trailing: Text(
                         '${t.isIncome ? "+" : "-"} UGX ${t.amount.toStringAsFixed(0)}',
                         style: TextStyle(
-                            color: t.isIncome ? Colors.green : Colors.red,
+                            color: t.isIncome
+                                ? Colors.green
+                                : Colors.red,
                             fontWeight: FontWeight.bold),
                       ),
                     );
@@ -778,7 +1325,7 @@ class GoatDetailView extends ConsumerWidget {
             const Divider(height: 32, thickness: 1),
 
             // ================================================================
-            // ⚖️ SECTION 3: WEIGHT RECORDS
+            // ⚖️ SECTION 3: WEIGHT RECORDS + TREND
             // ================================================================
             _sectionHeader(
               title: 'Weight History',
@@ -786,7 +1333,11 @@ class GoatDetailView extends ConsumerWidget {
               color: Colors.teal,
               onAdd: () => _showWeightDialog(context, ref),
             ),
-            ref.watch(watchWeightRecordsProvider(goat.id!)).when(
+
+            if (weightRecords.isNotEmpty)
+              _buildWeightTrend(weightRecords),
+
+            weightRecordsAsync.when(
               data: (records) {
                 if (records.isEmpty) {
                   return const Padding(
@@ -801,15 +1352,42 @@ class GoatDetailView extends ConsumerWidget {
                   itemCount: records.length,
                   itemBuilder: (context, index) {
                     final r = records[index];
+                    String? changeText;
+                    Color changeColor = Colors.grey;
+                    if (index < records.length - 1) {
+                      final prev = records[index + 1];
+                      final diff = r.weightKg - prev.weightKg;
+                      changeText = diff >= 0
+                          ? '+${diff.toStringAsFixed(1)} kg'
+                          : '${diff.toStringAsFixed(1)} kg';
+                      changeColor =
+                          diff >= 0 ? Colors.green : Colors.red;
+                    }
+
                     return Card(
                       margin: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
                       child: ListTile(
-                        leading:
-                            const Icon(Icons.scale, color: Colors.teal),
-                        title: Text('${r.weightKg} kg'),
-                        subtitle:
-                            r.notes != null ? Text(r.notes!) : null,
+                        leading: const Icon(Icons.scale,
+                            color: Colors.teal),
+                        title: Row(
+                          children: [
+                            Text('${r.weightKg} kg',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            if (changeText != null) ...[
+                              const SizedBox(width: 8),
+                              Text(changeText,
+                                  style: TextStyle(
+                                      color: changeColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600)),
+                            ],
+                          ],
+                        ),
+                        subtitle: r.notes != null
+                            ? Text(r.notes!)
+                            : null,
                         trailing: Text(
                             '${r.date.day}/${r.date.month}/${r.date.year}'),
                         onTap: () => showModalBottomSheet(
