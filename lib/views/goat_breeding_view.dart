@@ -5,12 +5,43 @@ import '../services/providers.dart';
 
 class GoatBreedingView extends ConsumerWidget {
   final int goatId;
+  final String gender; // Pass gender from the parent view to restrict access
 
-  const GoatBreedingView({super.key, required this.goatId});
+  const GoatBreedingView({
+    super.key, 
+    required this.goatId,
+    required this.gender,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the real-time breeding logs for this specific goat ID
+    // Fail-safe protection check: If this is a male goat, display an info warning and hide tracking tools
+    if (gender.trim().toLowerCase() == 'male' || gender.trim().toLowerCase() == 'buck') {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.gavel_rounded, size: 48, color: Colors.orange),
+              SizedBox(height: 12),
+              Text(
+                'Breeding Features Restricted',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Reproduction and pregnancy history logs can only be registered for female does.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Real-time breeding records stream for female does
     final breedingAsync = ref.watch(watchBreedingRecordsProvider(goatId));
 
     return Scaffold(
@@ -57,7 +88,6 @@ class GoatBreedingView extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          // Display total offspring count if animal already kidded
                           if (record.numberOfKids != null && record.numberOfKids! > 0)
                             Chip(
                               label: Text('${record.numberOfKids} Kids'),
@@ -142,7 +172,6 @@ class GoatBreedingView extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Mating Date Selector
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Mating Date'),
@@ -186,7 +215,6 @@ class GoatBreedingView extends ConsumerWidget {
                       },
                       decoration: const InputDecoration(labelText: 'Cycle Status/Outcome'),
                     ),
-                    // Only show kid volume counts if status selection shows 'Kidded'
                     if (selectedOutcome == 'Kidded')
                       TextField(
                         controller: kidsController,
@@ -210,7 +238,7 @@ class GoatBreedingView extends ConsumerWidget {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
                   onPressed: () async {
-                    // Approximate goat gestation period is roughly 150 days
+                    // Approximate goat gestation period is 150 days
                     final computedKiddingDate = selectedMatingDate.add(const Duration(days: 150));
                     final kidsBornCount = int.tryParse(kidsController.text);
 
